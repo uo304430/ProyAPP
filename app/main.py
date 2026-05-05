@@ -156,6 +156,9 @@ def vincular_entrenador_atleta(link_data: CoachAthleteLink, db: Session = Depend
     return {"mensaje": "Atleta vinculado al entrenador correctamente"}
 from pydantic import BaseModel
 
+from pydantic import BaseModel
+from typing import Optional
+
 class PlannedWorkoutCreate(BaseModel):
     coach_id: int
     athlete_id: int
@@ -163,6 +166,7 @@ class PlannedWorkoutCreate(BaseModel):
     target_weight: float
     target_reps: int
     target_rpe: float
+    modifier: Optional[str] = None # Campo opcional para la variante
 
 @app.post("/planificar/")
 def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session = Depends(get_db)):
@@ -176,14 +180,15 @@ def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
     
-    # 3. Creamos el registro del plan
+    # 3. Creamos el registro del plan incluyendo el modificador
     nuevo_plan = models.PlannedWorkout(
         coach_id=plan_data.coach_id,
         athlete_id=plan_data.athlete_id,
         exercise_id=plan_data.exercise_id,
         target_weight=plan_data.target_weight,
         target_reps=plan_data.target_reps,
-        target_rpe=plan_data.target_rpe
+        target_rpe=plan_data.target_rpe,
+        modifier=plan_data.modifier
     )
     
     db.add(nuevo_plan)
@@ -191,7 +196,8 @@ def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session
     db.refresh(nuevo_plan)
     
     return {
-        "mensaje": "Entrenamiento planificado correctamente",
+        "mensaje": "Entrenamiento planificado con variante correctamente",
         "plan_id": nuevo_plan.id,
-        "ejercicio_id": nuevo_plan.exercise_id
+        "ejercicio_id": nuevo_plan.exercise_id,
+        "variante": nuevo_plan.modifier
     }

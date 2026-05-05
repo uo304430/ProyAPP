@@ -33,7 +33,6 @@ class CoachAthlete(Base):
     coach_id = Column(Integer, ForeignKey("users.id"))
     athlete_id = Column(Integer, ForeignKey("users.id"))
 
-# AÑADIMOS EL NUEVO MODELO PARA EL SPRINT 3:
 class PlannedWorkout(Base):
     __tablename__ = "planned_workouts"
     
@@ -44,3 +43,6 @@ class PlannedWorkout(Base):
     target_weight = Column(Float, nullable=True)
     target_reps = Column(Integer)
     target_rpe = Column(Float)
+    
+    # NUEVO CAMPO: Permite almacenar modificadores como "Tempo 3-0-0" o "Pausa 2s"
+    modifier = Column(String, nullable=True)
