@@ -1,13 +1,24 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import bcrypt # Cambiamos passlib por bcrypt
+from typing import Optional
+import bcrypt
+from fastapi.middleware.cors import CORSMiddleware
+
 from . import models, database
 
 # Crear las tablas en la base de datos
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="Powerlifting API - Sprint 2")
+app = FastAPI(title="Powerlifting SaaS")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db():
     db = database.SessionLocal()
@@ -16,10 +27,41 @@ def get_db():
     finally:
         db.close()
 
+# ---------------------------------------------------------
+# Esquemas Pydantic
+# ---------------------------------------------------------
+
 class UserCreate(BaseModel):
     email: str
     password: str
     role: str
+
+class CoachAthleteLink(BaseModel):
+    coach_id: int
+    athlete_id: int
+
+class BlockCreate(BaseModel):
+    name: str
+    coach_id: int
+    athlete_id: int
+
+class WeekCreate(BaseModel):
+    block_id: int
+    week_number: int
+
+class DayCreate(BaseModel):
+    week_id: int
+    day_number: int
+
+class SetCreate(BaseModel):
+    workout_id: int
+    exercise_id: int
+    planned_weight: float
+    planned_reps: int
+    planned_rpe: float
+    weight: float
+    reps: int
+    rpe: float
 
 # ---------------------------------------------------------
 # Endpoints de Inicio y 1RM
@@ -57,24 +99,105 @@ def crear_ejercicio(nombre: str, db: Session = Depends(get_db)):
     return {"mensaje": "Ejercicio creado", "id": nuevo_ejercicio.id, "nombre": nuevo_ejercicio.name}
 
 # ---------------------------------------------------------
-# Endpoints de Series (Sets)
+# Endpoints de Registro y Gestión de Usuarios
 # ---------------------------------------------------------
 
-from pydantic import BaseModel
+@app.post("/register/")
+def registrar_usuario(user_data: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+    
+    pwd_bytes = user_data.password.encode('utf-8')
+    hashed_pass = bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
+    
+    nuevo_usuario = models.User(
+        email=user_data.email,
+        hashed_password=hashed_pass,
+        role=user_data.role
+    )
+    
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    
+    return {
+        "mensaje": "Usuario registrado exitosamente",
+        "usuario_id": nuevo_usuario.id,
+        "email": nuevo_usuario.email,
+        "rol": nuevo_usuario.role
+    }
 
-class SetCreate(BaseModel):
-    workout_id: int
-    exercise_id: int
-    planned_weight: float
-    planned_reps: int
-    planned_rpe: float
-    weight: float
-    reps: int
-    rpe: float
+@app.post("/vincular/")
+def vincular_entrenador_atleta(link_data: CoachAthleteLink, db: Session = Depends(get_db)):
+    coach = db.query(models.User).filter(models.User.id == link_data.coach_id, models.User.role == "coach").first()
+    if not coach:
+        raise HTTPException(status_code=404, detail="Entrenador no encontrado o no tiene el rol correcto")
+    
+    athlete = db.query(models.User).filter(models.User.id == link_data.athlete_id, models.User.role == "athlete").first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado o no tiene el rol correcto")
+    
+    existing_link = db.query(models.CoachAthlete).filter(
+        models.CoachAthlete.coach_id == link_data.coach_id,
+        models.CoachAthlete.athlete_id == link_data.athlete_id
+    ).first()
+    
+    if existing_link:
+        return {"mensaje": "Esta relación ya existe"}
+    
+    nuevo_vinculo = models.CoachAthlete(
+        coach_id=link_data.coach_id,
+        athlete_id=link_data.athlete_id
+    )
+    
+    db.add(nuevo_vinculo)
+    db.commit()
+    
+    return {"mensaje": "Atleta vinculado al entrenador correctamente"}
+
+# ---------------------------------------------------------
+# Endpoints de la Nueva Jerarquía (Bloque -> Semana -> Día -> Ejercicio)
+# ---------------------------------------------------------
+
+@app.post("/blocks/")
+def crear_bloque(block_data: BlockCreate, db: Session = Depends(get_db)):
+    nuevo_bloque = models.Block(
+        name=block_data.name,
+        coach_id=block_data.coach_id,
+        athlete_id=block_data.athlete_id
+    )
+    db.add(nuevo_bloque)
+    db.commit()
+    db.refresh(nuevo_bloque)
+    return {"mensaje": "Bloque creado", "bloque_id": nuevo_bloque.id}
+
+
+@app.post("/weeks/")
+def crear_semana(week_data: WeekCreate, db: Session = Depends(get_db)):
+    nueva_semana = models.Week(
+        block_id=week_data.block_id,
+        week_number=week_data.week_number
+    )
+    db.add(nueva_semana)
+    db.commit()
+    db.refresh(nueva_semana)
+    return {"mensaje": "Semana creada", "semana_id": nueva_semana.id}
+
+
+@app.post("/days/")
+def crear_dia(day_data: DayCreate, db: Session = Depends(get_db)):
+    nuevo_dia = models.Day(
+        week_id=day_data.week_id,
+        day_number=day_data.day_number
+    )
+    db.add(nuevo_dia)
+    db.commit()
+    db.refresh(nuevo_dia)
+    return {"mensaje": "Día creado", "dia_id": nuevo_dia.id}
 
 @app.post("/series/")
 def registrar_serie(set_data: SetCreate, db: Session = Depends(get_db)):
-    # Cálculo del e1RM basado en los datos reales ejecutados
     reps_equivalentes = set_data.reps + (10 - set_data.rpe)
     e1rm = set_data.weight / (1.0278 - (0.0278 * reps_equivalentes))
     
@@ -95,7 +218,7 @@ def registrar_serie(set_data: SetCreate, db: Session = Depends(get_db)):
     db.refresh(nueva_serie)
     
     return {
-        "mensaje": "Serie registrada con éxito y comparada con el objetivo",
+        "mensaje": "Serie registrada con éxito",
         "set_id": nueva_serie.id,
         "e1rm": nueva_serie.estimated_1rm,
         "objetivo_vs_real": {
@@ -103,155 +226,58 @@ def registrar_serie(set_data: SetCreate, db: Session = Depends(get_db)):
             "peso_real": nueva_serie.weight
         }
     }
+
 # ---------------------------------------------------------
-# Endpoints de Registro de Usuario
+# Endpoints de Obtención Jerárquica
 # ---------------------------------------------------------
 
-@app.post("/register/")
-def registrar_usuario(user_data: UserCreate, db: Session = Depends(get_db)):
-    # 1. Verificar si el usuario ya existe
-    db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="El email ya está registrado")
-    
-    # 2. Encriptar la contraseña usando bcrypt directamente
-    pwd_bytes = user_data.password.encode('utf-8')
-    hashed_pass = bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
-    
-    # 3. Crear el nuevo usuario
-    nuevo_usuario = models.User(
-        email=user_data.email,
-        hashed_password=hashed_pass,
-        role=user_data.role
-    )
-    
-    db.add(nuevo_usuario)
-    db.commit()
-    db.refresh(nuevo_usuario)
-    
-    return {
-        "mensaje": "Usuario registrado exitosamente",
-        "usuario_id": nuevo_usuario.id,
-        "email": nuevo_usuario.email,
-        "rol": nuevo_usuario.role
-    }
-class CoachAthleteLink(BaseModel):
-    coach_id: int
-    athlete_id: int
+@app.get("/atleta/{athlete_id}/blocks/")
+def obtener_bloques_atleta(athlete_id: int, db: Session = Depends(get_db)):
+    bloques = db.query(models.Block).filter(models.Block.athlete_id == athlete_id).all()
+    return {"atleta_id": athlete_id, "bloques": bloques}
 
-@app.post("/vincular/")
-def vincular_entrenador_atleta(link_data: CoachAthleteLink, db: Session = Depends(get_db)):
-    # Verificamos que el coach exista
-    coach = db.query(models.User).filter(models.User.id == link_data.coach_id, models.User.role == "coach").first()
-    if not coach:
-        raise HTTPException(status_code=404, detail="Entrenador no encontrado o no tiene el rol correcto")
-    
-    # Verificamos que el atleta exista
-    athlete = db.query(models.User).filter(models.User.id == link_data.athlete_id, models.User.role == "athlete").first()
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta no encontrado o no tiene el rol correcto")
-    
-    # Verificamos si ya existe la relación para no duplicar
-    existing_link = db.query(models.CoachAthlete).filter(
-        models.CoachAthlete.coach_id == link_data.coach_id,
-        models.CoachAthlete.athlete_id == link_data.athlete_id
-    ).first()
-    
-    if existing_link:
-        return {"mensaje": "Esta relación ya existe"}
-    
-    # Creamos el nuevo enlace
-    nuevo_vinculo = models.CoachAthlete(
-        coach_id=link_data.coach_id,
-        athlete_id=link_data.athlete_id
-    )
-    
-    db.add(nuevo_vinculo)
-    db.commit()
-    
-    return {"mensaje": "Atleta vinculado al entrenador correctamente"}
-from pydantic import BaseModel
 
-from pydantic import BaseModel
-from typing import Optional
+@app.get("/blocks/{block_id}/weeks/")
+def obtener_semanas_bloque(block_id: int, db: Session = Depends(get_db)):
+    semanas = db.query(models.Week).filter(models.Week.block_id == block_id).all()
+    return {"bloque_id": block_id, "semanas": semanas}
 
-class PlannedWorkoutCreate(BaseModel):
-    coach_id: int
-    athlete_id: int
-    exercise_id: int
-    target_weight: float
-    target_reps: int
-    target_rpe: float
-    modifier: Optional[str] = None # Campo opcional para la variante
 
-@app.post("/planificar/")
-def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session = Depends(get_db)):
-    # 1. Verificamos que el entrenador exista
-    coach = db.query(models.User).filter(models.User.id == plan_data.coach_id, models.User.role == "coach").first()
-    if not coach:
-        raise HTTPException(status_code=404, detail="Entrenador no encontrado")
-    
-    # 2. Verificamos que el atleta exista
-    athlete = db.query(models.User).filter(models.User.id == plan_data.athlete_id, models.User.role == "athlete").first()
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta no encontrado")
-    
-    # 3. Creamos el registro del plan incluyendo el modificador
-    nuevo_plan = models.PlannedWorkout(
-        coach_id=plan_data.coach_id,
-        athlete_id=plan_data.athlete_id,
-        exercise_id=plan_data.exercise_id,
-        target_weight=plan_data.target_weight,
-        target_reps=plan_data.target_reps,
-        target_rpe=plan_data.target_rpe,
-        modifier=plan_data.modifier
-    )
-    
-    db.add(nuevo_plan)
-    db.commit()
-    db.refresh(nuevo_plan)
-    
-    return {
-        "mensaje": "Entrenamiento planificado con variante correctamente",
-        "plan_id": nuevo_plan.id,
-        "ejercicio_id": nuevo_plan.exercise_id,
-        "variante": nuevo_plan.modifier
-    }
-@app.get("/atleta/{athlete_id}/plan/")
-def obtener_plan_atleta(athlete_id: int, db: Session = Depends(get_db)):
-    # 1. Verificamos que el atleta exista
-    athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta no encontrado en el sistema")
-    
-    # 2. Obtenemos los planes unidos con el nombre del ejercicio
+@app.get("/weeks/{week_id}/days/")
+def obtener_dias_semana(week_id: int, db: Session = Depends(get_db)):
+    dias = db.query(models.Day).filter(models.Day.week_id == week_id).all()
+    return {"semana_id": week_id, "dias": dias}
+
+
+@app.get("/days/{day_id}/workouts/")
+def obtener_entrenos_dia(day_id: int, db: Session = Depends(get_db)):
     resultados = db.query(models.PlannedWorkout, models.Exercise).join(
         models.Exercise, models.PlannedWorkout.exercise_id == models.Exercise.id
-    ).filter(models.PlannedWorkout.athlete_id == athlete_id).all()
+    ).filter(models.PlannedWorkout.day_id == day_id).all()
     
-    if not resultados:
-        return {"mensaje": "No hay entrenamientos planificados para este atleta"}
-        
-    plan_detalle = []
+    entrenos = []
     for plan, ejercicio in resultados:
-        plan_detalle.append({
+        entrenos.append({
             "plan_id": plan.id,
-            "ejercicio": ejercicio.name,
-            "peso_target": plan.target_weight,
-            "reps_target": plan.target_reps,
-            "rpe_target": plan.target_rpe,
-            "variante": plan.modifier
+            "ejercicio_id": plan.exercise_id,
+            "ejercicio_nombre": ejercicio.name,
+            "target_weight": plan.target_weight,
+            "target_reps": plan.target_reps,
+            "target_rpe": plan.target_rpe,
+            "modifier": plan.modifier
         })
-        
-    return {"atleta_id": athlete_id, "entrenos": plan_detalle}
+    return {"dia_id": day_id, "entrenos": entrenos}
+
+# ---------------------------------------------------------
+# Endpoints de Analítica y Progreso
+# ---------------------------------------------------------
+
 @app.get("/atleta/{athlete_id}/ejercicio/{exercise_id}/progreso/")
 def obtener_progreso_ejercicio(athlete_id: int, exercise_id: int, db: Session = Depends(get_db)):
-    # 1. Comprobamos que el atleta exista
     athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
         
-    # 2. Obtenemos las series de ese atleta para ese ejercicio
     resultados = db.query(models.Set).filter(
         models.Set.exercise_id == exercise_id
     ).join(
@@ -277,14 +303,15 @@ def obtener_progreso_ejercicio(athlete_id: int, exercise_id: int, db: Session = 
         "atleta_id": athlete_id,
         "ejercicio_id": exercise_id,
         "historial_series": historico
-    } @app.get("/atleta/{athlete_id}/cumplimiento/")
+    }
+
+
+@app.get("/atleta/{athlete_id}/cumplimiento/")
 def obtener_cumplimiento(athlete_id: int, db: Session = Depends(get_db)):
-    # 1. Comprobamos que el atleta exista
     athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
         
-    # 2. Obtenemos los sets planificados y ejecutados
     resultados = db.query(models.Set, models.PlannedWorkout).join(
         models.PlannedWorkout, models.Set.workout_id == models.PlannedWorkout.id
     ).filter(
@@ -296,7 +323,6 @@ def obtener_cumplimiento(athlete_id: int, db: Session = Depends(get_db)):
         
     cumplimiento = []
     for serie, plan in resultados:
-        # Lógica de semáforo
         estado_rpe = "Verde"
         if serie.rpe and plan.target_rpe:
             if serie.rpe > plan.target_rpe:
@@ -316,4 +342,24 @@ def obtener_cumplimiento(athlete_id: int, db: Session = Depends(get_db)):
     return {
         "atleta_id": athlete_id,
         "analisis_cumplimiento": cumplimiento
+    }
+
+@app.post("/login/")
+def iniciar_sesion(user_data: UserCreate, db: Session = Depends(get_db)):
+    # 1. Buscar al usuario por su email
+    db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Usuario no encontrado. ¿Estás registrado?")
+    
+    # 2. Verificar la contraseña encriptada
+    pwd_bytes = user_data.password.encode('utf-8')
+    if not bcrypt.checkpw(pwd_bytes, db_user.hashed_password.encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Contraseña incorrecta")
+    
+    # 3. Devolver el ID y el rol para gestionar la sesión
+    return {
+        "mensaje": "Inicio de sesión exitoso",
+        "usuario_id": db_user.id,
+        "email": db_user.email,
+        "rol": db_user.role
     }
