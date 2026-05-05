@@ -60,24 +60,33 @@ def crear_ejercicio(nombre: str, db: Session = Depends(get_db)):
 # Endpoints de Series (Sets)
 # ---------------------------------------------------------
 
+from pydantic import BaseModel
+
+class SetCreate(BaseModel):
+    workout_id: int
+    exercise_id: int
+    planned_weight: float
+    planned_reps: int
+    planned_rpe: float
+    weight: float
+    reps: int
+    rpe: float
+
 @app.post("/series/")
-def registrar_serie(
-    workout_id: int, 
-    exercise_id: int, 
-    peso: float, 
-    reps: int, 
-    rpe: float, 
-    db: Session = Depends(get_db)
-):
-    reps_equivalentes = reps + (10 - rpe)
-    e1rm = peso / (1.0278 - (0.0278 * reps_equivalentes))
+def registrar_serie(set_data: SetCreate, db: Session = Depends(get_db)):
+    # Cálculo del e1RM basado en los datos reales ejecutados
+    reps_equivalentes = set_data.reps + (10 - set_data.rpe)
+    e1rm = set_data.weight / (1.0278 - (0.0278 * reps_equivalentes))
     
     nueva_serie = models.Set(
-        workout_id=workout_id,
-        exercise_id=exercise_id,
-        weight=peso,
-        reps=reps,
-        rpe=rpe,
+        workout_id=set_data.workout_id,
+        exercise_id=set_data.exercise_id,
+        planned_weight=set_data.planned_weight,
+        planned_reps=set_data.planned_reps,
+        planned_rpe=set_data.planned_rpe,
+        weight=set_data.weight,
+        reps=set_data.reps,
+        rpe=set_data.rpe,
         estimated_1rm=round(e1rm, 2)
     )
     
@@ -85,8 +94,15 @@ def registrar_serie(
     db.commit()
     db.refresh(nueva_serie)
     
-    return {"mensaje": "Serie registrada con éxito", "e1rm": nueva_serie.estimated_1rm}
-
+    return {
+        "mensaje": "Serie registrada con éxito y comparada con el objetivo",
+        "set_id": nueva_serie.id,
+        "e1rm": nueva_serie.estimated_1rm,
+        "objetivo_vs_real": {
+            "objetivo_peso": nueva_serie.planned_weight,
+            "peso_real": nueva_serie.weight
+        }
+    }
 # ---------------------------------------------------------
 # Endpoints de Registro de Usuario
 # ---------------------------------------------------------
@@ -200,4 +216,65 @@ def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session
         "plan_id": nuevo_plan.id,
         "ejercicio_id": nuevo_plan.exercise_id,
         "variante": nuevo_plan.modifier
+    }
+@app.get("/atleta/{athlete_id}/plan/")
+def obtener_plan_atleta(athlete_id: int, db: Session = Depends(get_db)):
+    # 1. Verificamos que el atleta exista
+    athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado en el sistema")
+    
+    # 2. Obtenemos los planes unidos con el nombre del ejercicio
+    resultados = db.query(models.PlannedWorkout, models.Exercise).join(
+        models.Exercise, models.PlannedWorkout.exercise_id == models.Exercise.id
+    ).filter(models.PlannedWorkout.athlete_id == athlete_id).all()
+    
+    if not resultados:
+        return {"mensaje": "No hay entrenamientos planificados para este atleta"}
+        
+    plan_detalle = []
+    for plan, ejercicio in resultados:
+        plan_detalle.append({
+            "plan_id": plan.id,
+            "ejercicio": ejercicio.name,
+            "peso_target": plan.target_weight,
+            "reps_target": plan.target_reps,
+            "rpe_target": plan.target_rpe,
+            "variante": plan.modifier
+        })
+        
+    return {"atleta_id": athlete_id, "entrenos": plan_detalle}
+@app.get("/atleta/{athlete_id}/ejercicio/{exercise_id}/progreso/")
+def obtener_progreso_ejercicio(athlete_id: int, exercise_id: int, db: Session = Depends(get_db)):
+    # 1. Comprobamos que el atleta exista
+    athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+        
+    # 2. Obtenemos las series de ese atleta para ese ejercicio
+    resultados = db.query(models.Set).filter(
+        models.Set.exercise_id == exercise_id
+    ).join(
+        models.PlannedWorkout, models.Set.workout_id == models.PlannedWorkout.id
+    ).filter(
+        models.PlannedWorkout.athlete_id == athlete_id
+    ).all()
+    
+    if not resultados:
+        return {"mensaje": "No hay datos de progreso para este ejercicio y atleta."}
+        
+    historico = []
+    for serie in resultados:
+        historico.append({
+            "set_id": serie.id,
+            "peso_real": serie.weight,
+            "reps_real": serie.reps,
+            "rpe_real": serie.rpe,
+            "e1rm_estimado": serie.estimated_1rm
+        })
+        
+    return {
+        "atleta_id": athlete_id,
+        "ejercicio_id": exercise_id,
+        "historial_series": historico
     }

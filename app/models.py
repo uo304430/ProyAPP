@@ -7,17 +7,6 @@ class Exercise(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
 
-class Set(Base):
-    __tablename__ = "sets"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    workout_id = Column(Integer)
-    exercise_id = Column(Integer)
-    weight = Column(Float)
-    reps = Column(Integer)
-    rpe = Column(Float, nullable=True)
-    estimated_1rm = Column(Float, nullable=True)
-
 class User(Base):
     __tablename__ = "users"
     
@@ -44,5 +33,23 @@ class PlannedWorkout(Base):
     target_reps = Column(Integer)
     target_rpe = Column(Float)
     
-    # NUEVO CAMPO: Permite almacenar modificadores como "Tempo 3-0-0" o "Pausa 2s"
-    modifier = Column(String, nullable=True)
+    # Campo para almacenar modificadores como "Tempo 3-0-0" o "Pausa 2s"
+    modifier = Column(String, nullable=True) 
+
+class Set(Base):
+    __tablename__ = "sets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    workout_id = Column(Integer, ForeignKey("planned_workouts.id"), nullable=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"))
+    
+    # Datos Planificados (Target del Entrenador)
+    planned_weight = Column(Float, nullable=True)
+    planned_reps = Column(Integer, nullable=True)
+    planned_rpe = Column(Float, nullable=True)
+    
+    # Datos Reales (Ejecución del Atleta)
+    weight = Column(Float, nullable=True)
+    reps = Column(Integer, nullable=True)
+    rpe = Column(Float, nullable=True)
+    estimated_1rm = Column(Float, nullable=True)
