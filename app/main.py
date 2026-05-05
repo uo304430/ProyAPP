@@ -277,4 +277,43 @@ def obtener_progreso_ejercicio(athlete_id: int, exercise_id: int, db: Session = 
         "atleta_id": athlete_id,
         "ejercicio_id": exercise_id,
         "historial_series": historico
+    } @app.get("/atleta/{athlete_id}/cumplimiento/")
+def obtener_cumplimiento(athlete_id: int, db: Session = Depends(get_db)):
+    # 1. Comprobamos que el atleta exista
+    athlete = db.query(models.User).filter(models.User.id == athlete_id, models.User.role == "athlete").first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+        
+    # 2. Obtenemos los sets planificados y ejecutados
+    resultados = db.query(models.Set, models.PlannedWorkout).join(
+        models.PlannedWorkout, models.Set.workout_id == models.PlannedWorkout.id
+    ).filter(
+        models.PlannedWorkout.athlete_id == athlete_id
+    ).all()
+    
+    if not resultados:
+        return {"mensaje": "No hay datos de cumplimiento para este atleta."}
+        
+    cumplimiento = []
+    for serie, plan in resultados:
+        # Lógica de semáforo
+        estado_rpe = "Verde"
+        if serie.rpe and plan.target_rpe:
+            if serie.rpe > plan.target_rpe:
+                estado_rpe = "Rojo (Intensidad excedida)"
+            elif serie.rpe < plan.target_rpe:
+                estado_rpe = "Amarillo (Por debajo del objetivo)"
+                
+        cumplimiento.append({
+            "plan_id": plan.id,
+            "target_peso": plan.target_weight,
+            "peso_real": serie.weight,
+            "target_rpe": plan.target_rpe,
+            "rpe_real": serie.rpe,
+            "estado_cumplimiento": estado_rpe
+        })
+        
+    return {
+        "atleta_id": athlete_id,
+        "analisis_cumplimiento": cumplimiento
     }
