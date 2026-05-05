@@ -1,8 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from .database import Base
 
-# (Mantén tus modelos Exercise, Set y User como los tienes actualmente)
-
 class Exercise(Base):
     __tablename__ = "exercises"
     
@@ -28,10 +26,21 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String)
 
-# AÑADE ESTA NUEVA TABLA AQUÍ:
 class CoachAthlete(Base):
     __tablename__ = "coach_athlete"
     
     id = Column(Integer, primary_key=True, index=True)
     coach_id = Column(Integer, ForeignKey("users.id"))
     athlete_id = Column(Integer, ForeignKey("users.id"))
+
+# AÑADIMOS EL NUEVO MODELO PARA EL SPRINT 3:
+class PlannedWorkout(Base):
+    __tablename__ = "planned_workouts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    coach_id = Column(Integer, ForeignKey("users.id"))
+    athlete_id = Column(Integer, ForeignKey("users.id"))
+    exercise_id = Column(Integer, ForeignKey("exercises.id"))
+    target_weight = Column(Float, nullable=True)
+    target_reps = Column(Integer)
+    target_rpe = Column(Float)

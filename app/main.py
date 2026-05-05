@@ -154,3 +154,44 @@ def vincular_entrenador_atleta(link_data: CoachAthleteLink, db: Session = Depend
     db.commit()
     
     return {"mensaje": "Atleta vinculado al entrenador correctamente"}
+from pydantic import BaseModel
+
+class PlannedWorkoutCreate(BaseModel):
+    coach_id: int
+    athlete_id: int
+    exercise_id: int
+    target_weight: float
+    target_reps: int
+    target_rpe: float
+
+@app.post("/planificar/")
+def crear_entrenamiento_planificado(plan_data: PlannedWorkoutCreate, db: Session = Depends(get_db)):
+    # 1. Verificamos que el entrenador exista
+    coach = db.query(models.User).filter(models.User.id == plan_data.coach_id, models.User.role == "coach").first()
+    if not coach:
+        raise HTTPException(status_code=404, detail="Entrenador no encontrado")
+    
+    # 2. Verificamos que el atleta exista
+    athlete = db.query(models.User).filter(models.User.id == plan_data.athlete_id, models.User.role == "athlete").first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+    
+    # 3. Creamos el registro del plan
+    nuevo_plan = models.PlannedWorkout(
+        coach_id=plan_data.coach_id,
+        athlete_id=plan_data.athlete_id,
+        exercise_id=plan_data.exercise_id,
+        target_weight=plan_data.target_weight,
+        target_reps=plan_data.target_reps,
+        target_rpe=plan_data.target_rpe
+    )
+    
+    db.add(nuevo_plan)
+    db.commit()
+    db.refresh(nuevo_plan)
+    
+    return {
+        "mensaje": "Entrenamiento planificado correctamente",
+        "plan_id": nuevo_plan.id,
+        "ejercicio_id": nuevo_plan.exercise_id
+    }
