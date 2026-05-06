@@ -5,6 +5,7 @@ const SemanasView = ({ blockId, onSelectWeek, onBack }) => {
     const [semanas, setSemanas] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
+    const [mostrarTodas, setMostrarTodas] = useState(false);
 
     useEffect(() => {
         const fetchSemanas = async () => {
@@ -57,8 +58,20 @@ const SemanasView = ({ blockId, onSelectWeek, onBack }) => {
                 <p style={{ textAlign: 'center', color: '#888' }}>No hay semanas creadas para este bloque.</p>
             )}
 
+            {!cargando && semanas.length > 1 && (
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <button
+                        type="button"
+                        onClick={() => setMostrarTodas(!mostrarTodas)}
+                        style={{ padding: '10px 16px', backgroundColor: '#00e676', color: '#121212', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        {mostrarTodas ? 'Ocultar semanas posteriores' : 'Mostrar semanas posteriores'}
+                    </button>
+                </div>
+            )}
+
             <div>
-                {semanas.map((semana) => (
+                {semanas.filter((semana) => mostrarTodas || semana.week_number === 1).map((semana) => (
                     <div 
                         key={semana.id} 
                         style={tarjetaEstilos}
