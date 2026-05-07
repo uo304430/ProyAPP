@@ -1,130 +1,145 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { t, btnPrimary, btnDanger } from '../styles/theme';
+
+const API = 'http://127.0.0.1:8000';
+
+const OBJECTIVE_LABELS = {
+  acumulacion: { label: 'Acumulación', color: t.info },
+  intensificacion: { label: 'Intensificación', color: t.warning },
+  peaking: { label: 'Peaking', color: t.primary },
+  descarga: { label: 'Descarga', color: t.text2 },
+};
 
 const BloquesView = ({ athleteId, onSelectBlock, onBack, onCreateBlock }) => {
-    const [bloques, setBloques] = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState('');
+  const [bloques, setBloques] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    const fetchBloques = async () => {
-        try {
-            const response = await axios.get(`http://127.0.0.1:8000/atleta/${athleteId}/blocks/`);
-            setBloques(response.data.bloques);
-        } catch (err) {
-            setError('No se pudieron cargar los bloques de entrenamiento.');
-        } finally {
-            setCargando(false);
-        }
-    };
+  useEffect(() => {
+    axios.get(`${API}/atleta/${athleteId}/blocks/`)
+      .then(r => setBloques(r.data.bloques))
+      .catch(() => setError('No se pudieron cargar los bloques'))
+      .finally(() => setLoading(false));
+  }, [athleteId]);
 
-    useEffect(() => {
-        fetchBloques();
-    }, [athleteId]);
+  const eliminar = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm('¿Eliminar este bloque?')) return;
+    try {
+      await axios.delete(`${API}/blocks/${id}/`);
+      setBloques(prev => prev.filter(b => b.id !== id));
+    } catch {
+      alert('Error al eliminar');
+    }
+  };
 
-    const handleEliminarBloque = async (e, blockId) => {
-        e.stopPropagation(); // Evita que se abra la vista al hacer clic en el botón
-        const confirmar = window.confirm('¿Estás seguro de que deseas eliminar este bloque?');
-        if (!confirmar) return;
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '32px 20px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto' }}>
 
-        try {
-            await axios.delete(`http://127.0.0.1:8000/blocks/${blockId}/`);
-            fetchBloques(); // Recarga la lista tras borrar
-        } catch (err) {
-            alert('Error al eliminar el bloque.');
-        }
-    };
-
-    return (
-        <div style={{
-            maxWidth: '500px',
-            margin: '30px auto',
-            padding: '20px',
-            backgroundColor: '#121212',
-            color: '#ffffff',
-            borderRadius: '10px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            fontFamily: 'sans-serif'
-        }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>Bloques</h2>
-                <button 
-                    style={{ 
-                        backgroundColor: '#00e676', 
-                        color: '#121212', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        padding: '6px 14px', 
-                        fontWeight: 'bold', 
-                        cursor: 'pointer' 
-                    }}
-                    onClick={onCreateBlock}
-                >
-                    + Crear
-                </button>
-            </div>
-
-            {cargando && <p style={{ textAlign: 'center' }}>Cargando bloques...</p>}
-            {error && <p style={{ color: '#ff5252', textAlign: 'center' }}>{error}</p>}
-
-            {!cargando && bloques.length === 0 && (
-                <p style={{ textAlign: 'center', color: '#888' }}>No hay bloques creados para este atleta.</p>
-            )}
-
-            <div>
-                {bloques.map((bloque) => (
-                    <div 
-                        key={bloque.id} 
-                        style={{
-                            backgroundColor: '#1e1e1e',
-                            padding: '18px',
-                            borderRadius: '8px',
-                            marginBottom: '15px',
-                            border: '1px solid #2c2c2c',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s'
-                        }}
-                        onClick={() => onSelectBlock(bloque.id)}
-                    >
-                        <div>
-                            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>{bloque.name}</h3>
-                            <span style={{ fontSize: '13px', color: '#a0a0a0' }}>
-                                Bloque personalizado del atleta {bloque.athlete_id}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <button 
-                                onClick={(e) => handleEliminarBloque(e, bloque.id)}
-                                style={{
-                                    backgroundColor: '#ff5252',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    padding: '6px 10px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    transition: 'opacity 0.2s'
-                                }}
-                            >
-                                Eliminar
-                            </button>
-                            <span style={{ color: '#aaa', fontSize: '20px' }}>›</span>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <button 
-                onClick={onBack} 
-                style={{ width: '100%', marginTop: '15px', padding: '10px', backgroundColor: '#424242', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
-                Volver al menú
-            </button>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+          <button
+            onClick={onBack}
+            style={{
+              background: 'none', border: `1px solid ${t.border2}`,
+              borderRadius: '8px', width: '36px', height: '36px',
+              cursor: 'pointer', color: t.text2, fontSize: '18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >←</button>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.3px' }}>Mis Bloques</h1>
+            <p style={{ color: t.text2, fontSize: '13px' }}>
+              {bloques.length} bloque{bloques.length !== 1 ? 's' : ''} de entrenamiento
+            </p>
+          </div>
+          <button onClick={onCreateBlock} style={btnPrimary}>
+            + Nuevo
+          </button>
         </div>
-    );
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: t.text2 }}>
+            Cargando...
+          </div>
+        )}
+        {error && (
+          <div style={{
+            backgroundColor: t.dangerDim, border: `1px solid ${t.danger}40`,
+            borderRadius: '10px', padding: '14px', color: t.danger, fontSize: '14px',
+          }}>{error}</div>
+        )}
+
+        {!loading && bloques.length === 0 && !error && (
+          <div style={{
+            textAlign: 'center', padding: '64px 20px',
+            backgroundColor: t.surface, border: `1px solid ${t.border}`,
+            borderRadius: '16px',
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏋️</div>
+            <p style={{ fontWeight: '600', fontSize: '16px', marginBottom: '8px' }}>Sin bloques todavía</p>
+            <p style={{ color: t.text2, fontSize: '14px', marginBottom: '24px' }}>
+              Crea tu primer bloque de entrenamiento
+            </p>
+            <button onClick={onCreateBlock} style={btnPrimary}>Crear primer bloque</button>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {bloques.map(b => {
+            const obj = OBJECTIVE_LABELS[b.objective] || null;
+            return (
+              <div
+                key={b.id}
+                onClick={() => onSelectBlock(b.id)}
+                style={{
+                  backgroundColor: t.surface, border: `1px solid ${t.border}`,
+                  borderRadius: '14px', padding: '20px 22px',
+                  cursor: 'pointer', transition: 'all 150ms ease',
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = t.primary; e.currentTarget.style.backgroundColor = t.surface2; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.backgroundColor = t.surface; }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '16px', letterSpacing: '-0.2px', truncate: true }}>
+                      {b.name}
+                    </span>
+                    {obj && (
+                      <span style={{
+                        fontSize: '11px', fontWeight: '600', letterSpacing: '0.3px',
+                        padding: '2px 8px', borderRadius: '20px',
+                        backgroundColor: `${obj.color}18`,
+                        color: obj.color, border: `1px solid ${obj.color}35`,
+                      }}>
+                        {obj.label.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '13px', color: t.text2 }}>
+                    {b.num_weeks} semana{b.num_weeks !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={e => eliminar(e, b.id)}
+                    style={btnDanger}
+                  >
+                    Eliminar
+                  </button>
+                  <span style={{ color: t.text3, fontSize: '20px' }}>›</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default BloquesView;

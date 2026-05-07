@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -30,10 +30,10 @@ class Block(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    coach_id = Column(Integer)
-    athlete_id = Column(Integer)
+    coach_id = Column(Integer, index=True)
+    athlete_id = Column(Integer, index=True)
+    objective = Column(String, nullable=True)
 
-    # Relación en cascada con las semanas
     weeks = relationship("Week", back_populates="block", cascade="all, delete-orphan")
 
 class Week(Base):

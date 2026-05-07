@@ -1,150 +1,114 @@
 import React, { useState } from 'react';
-import RegistroForm from './components/RegistroForm';
+import { t } from './styles/theme';
 import LoginForm from './components/LoginForm';
+import RegistroForm from './components/RegistroForm';
 import MenuView from './components/MenuView';
 import BloquesView from './components/BloquesView';
+import CrearBloqueView from './components/CrearBloqueView';
 import SemanasView from './components/SemanasView';
 import DiasView from './components/DiasView';
-import CrearBloqueView from './components/CrearBloqueView';
 import EntrenosDiaView from './components/EntrenosDiaView';
 import EjecucionSerieView from './components/EjecucionSerieView';
-import DisenoBaseView from './components/DisenoBaseView';
 
 function App() {
-  const [currentView, setCurrentView] = useState('register');
-  const [athleteId, setAthleteId] = useState(null); 
+  const [view, setView] = useState('login');
+  const [userId, setUserId] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [selectedBlockId, setSelectedBlockId] = useState(null);
   const [selectedWeekId, setSelectedWeekId] = useState(null);
   const [selectedDayId, setSelectedDayId] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
 
-  const handleRegisterSuccess = (id) => {
-    setAthleteId(id);
-    setCurrentView('menu');
-  };
-
-  const handleLoginSuccess = (id) => {
-    setAthleteId(id);
-    setCurrentView('menu');
+  const handleAuthSuccess = (id, role) => {
+    setUserId(id);
+    setUserRole(role);
+    setView('menu');
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#121212', color: '#fff', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginTop: '10px', color: '#00e676' }}>Powerlifting SaaS</h1>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, color: t.text }}>
 
-      {currentView === 'register' && (
-        <div>
-          <RegistroForm onRegisterSuccess={handleRegisterSuccess} />
-          <div style={{ textAlign: 'center', marginTop: '15px' }}>
-            <button 
-              onClick={() => setCurrentView('login')} 
-              style={{ background: 'none', border: 'none', color: '#00e676', textDecoration: 'underline', cursor: 'pointer' }}
-            >
-              ¿Ya estás registrado? Inicia sesión
-            </button>
-          </div>
-        </div>
-      )}
-
-      {currentView === 'login' && (
-        <LoginForm 
-          onLoginSuccess={handleLoginSuccess} 
-          setView={setCurrentView} 
+      {view === 'login' && (
+        <LoginForm
+          onLoginSuccess={(id, role) => handleAuthSuccess(id, role)}
+          onGoRegister={() => setView('register')}
         />
       )}
 
-      {currentView === 'menu' && (
-        <MenuView setView={setCurrentView} />
+      {view === 'register' && (
+        <RegistroForm
+          onRegisterSuccess={(id, role) => handleAuthSuccess(id, role)}
+          onGoLogin={() => setView('login')}
+        />
       )}
 
-      {currentView === 'blocks' && (
-        <BloquesView 
-          athleteId={athleteId || 1} 
+      {view === 'menu' && (
+        <MenuView userId={userId} userRole={userRole} setView={setView} />
+      )}
+
+      {view === 'blocks' && (
+        <BloquesView
+          athleteId={userId}
           onSelectBlock={(blockId) => {
             setSelectedBlockId(blockId);
-            setSelectedWeekId(null); // Limpia las semanas anteriores
-            setSelectedDayId(null);  // Limpia los días anteriores
-            setCurrentView('weeks');
+            setSelectedWeekId(null);
+            setSelectedDayId(null);
+            setView('weeks');
           }}
-          // Añadimos estas dos líneas que faltaban
-          onCreateBlock={() => setCurrentView('create-block')}
-          onBack={() => setCurrentView('menu')}
+          onCreateBlock={() => setView('create-block')}
+          onBack={() => setView('menu')}
         />
       )}
 
-     {currentView === 'create-block' && (
-        <CrearBloqueView 
-          coachId={1} // o el ID de tu entrenador/atleta
-          athleteId={athleteId} 
-          onBlockCreated={(blockId) => {
-            setSelectedBlockId(blockId); // Setea el ID del bloque
-            setCurrentView('diseno-base'); // Va a DisenoBaseView
-          }} 
-          onBack={() => setCurrentView('blocks')} 
+      {view === 'create-block' && (
+        <CrearBloqueView
+          coachId={userId}
+          athleteId={userId}
+          onFinished={() => setView('blocks')}
+          onBack={() => setView('blocks')}
         />
       )}
 
-      {/* Flujo de diseño base añadido */}
-      {currentView === 'diseno-base' && (
-        <DisenoBaseView 
+      {view === 'weeks' && (
+        <SemanasView
           blockId={selectedBlockId}
-          daysPerWeek={4} 
-          onFinish={() => {
-            alert('¡Semana base diseñada y replicada con éxito!');
-            setCurrentView('blocks');
-          }}
-        />
-      )}
-
-      {currentView === 'weeks' && (
-        <SemanasView 
-          blockId={selectedBlockId} 
           onSelectWeek={(weekId) => {
             setSelectedWeekId(weekId);
-            setCurrentView('days');
-          }} 
-          onBack={() => setCurrentView('blocks')} 
+            setView('days');
+          }}
+          onBack={() => setView('blocks')}
         />
       )}
 
-      {currentView === 'days' && (
-        <DiasView 
-          weekId={selectedWeekId} 
+      {view === 'days' && (
+        <DiasView
+          weekId={selectedWeekId}
           onSelectDay={(dayId) => {
             setSelectedDayId(dayId);
-            setCurrentView('entrenos-dia');
-          }} 
-          onBack={() => setCurrentView('weeks')} 
+            setView('entrenos-dia');
+          }}
+          onBack={() => setView('weeks')}
         />
       )}
 
-      {currentView === 'entrenos-dia' && (
-        <EntrenosDiaView 
+      {view === 'entrenos-dia' && (
+        <EntrenosDiaView
           dayId={selectedDayId}
           onSelectWorkout={(workout) => {
             setSelectedWorkout(workout);
-            setCurrentView('ejecucion-serie');
+            setView('ejecucion');
           }}
-          onBack={() => setCurrentView('days')}
+          onBack={() => setView('days')}
         />
       )}
 
-      {currentView === 'ejecucion-serie' && (
-        <EjecucionSerieView 
+      {view === 'ejecucion' && (
+        <EjecucionSerieView
           workout={selectedWorkout}
-          athleteId={athleteId || 1}
-          onBack={() => setCurrentView('entrenos-dia')}
+          athleteId={userId}
+          onBack={() => setView('entrenos-dia')}
         />
       )}
-      {currentView === 'ejecucion-entreno' && (
-        <EjecucionEntrenoView 
-          workout={selectedWorkout} 
-          onBack={() => setCurrentView('entrenos-dia')} 
-        />
-      )}
-
-      
-
     </div>
   );
 }
