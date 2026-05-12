@@ -1,88 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { t } from '../styles/theme';
+
+const API = '/api';
+
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 const DiasView = ({ weekId, onSelectDay, onBack }) => {
-    const [dias, setDias] = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState('');
+  const [dias, setDias] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    useEffect(() => {
-        const fetchDias = async () => {
-            if (!weekId) return;
-            
-            try {
-                const response = await axios.get(`http://127.0.0.1:8000/weeks/${weekId}/days/`);
-                setDias(response.data.dias);
-            } catch (err) {
-                setError('No se pudieron cargar los días de esta semana.');
-            } finally {
-                setCargando(false);
-            }
-        };
+  useEffect(() => {
+    if (!weekId) return;
+    axios.get(`${API}/weeks/${weekId}/days/`)
+      .then(r => setDias(r.data.dias || []))
+      .catch(() => setError('No se pudieron cargar los días'))
+      .finally(() => setLoading(false));
+  }, [weekId]);
 
-        fetchDias();
-    }, [weekId]);
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '32px 20px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto' }}>
 
-    const tarjetaEstilos = {
-        backgroundColor: '#1e1e1e',
-        padding: '18px',
-        borderRadius: '8px',
-        marginBottom: '15px',
-        border: '1px solid #2c2c2c',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s'
-    };
-
-    return (
-        <div style={{
-            maxWidth: '500px',
-            margin: '30px auto',
-            padding: '20px',
-            backgroundColor: '#121212',
-            color: '#ffffff',
-            borderRadius: '10px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            fontFamily: 'sans-serif'
-        }}>
-            <h2>Días de Entrenamiento</h2>
-            <p style={{ color: '#a0a0a0', marginBottom: '20px' }}>Selecciona el día de la semana:</p>
-
-            {cargando && <p style={{ textAlign: 'center' }}>Cargando días...</p>}
-            {error && <p style={{ color: '#ff5252', textAlign: 'center' }}>{error}</p>}
-
-            {!cargando && dias.length === 0 && (
-                <p style={{ textAlign: 'center', color: '#888' }}>No hay días creados para esta semana.</p>
-            )}
-
-            <div>
-                {dias.map((dia) => (
-                    <div 
-                        key={dia.id} 
-                        style={tarjetaEstilos}
-                        onClick={() => onSelectDay(dia.id)}
-                    >
-                        <div>
-                            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>Día {dia.day_number}</h3>
-                            <span style={{ fontSize: '13px', color: '#a0a0a0' }}>
-                                Toca para ver los ejercicios planificados
-                            </span>
-                        </div>
-                        <span style={{ color: '#aaa', fontSize: '20px' }}>›</span>
-                    </div>
-                ))}
-            </div>
-
-            <button 
-                onClick={onBack} 
-                style={{ width: '100%', marginTop: '15px', padding: '10px', backgroundColor: '#424242', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
-                Volver a Semanas
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+          <button
+            onClick={onBack}
+            style={{
+              background: 'none', border: `1px solid ${t.border2}`,
+              borderRadius: '8px', width: '36px', height: '36px',
+              cursor: 'pointer', color: t.text2, fontSize: '18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >←</button>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.3px' }}>Días</h1>
+            <p style={{ color: t.text2, fontSize: '13px' }}>Elige qué día entrenar hoy</p>
+          </div>
         </div>
-    );
+
+        {loading && <p style={{ textAlign: 'center', color: t.text2, padding: '48px 0' }}>Cargando...</p>}
+        {error && (
+          <div style={{
+            backgroundColor: t.dangerDim, border: `1px solid ${t.danger}40`,
+            borderRadius: '10px', padding: '14px', color: t.danger, fontSize: '14px',
+          }}>{error}</div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {dias.map(dia => (
+            <button
+              key={dia.id}
+              onClick={() => onSelectDay(dia.id)}
+              style={{
+                backgroundColor: t.surface, border: `1px solid ${t.border}`,
+                borderRadius: '12px', padding: '18px 20px',
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'center', gap: '16px',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = t.primary;
+                e.currentTarget.style.backgroundColor = t.surface2;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.backgroundColor = t.surface;
+              }}
+            >
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '10px',
+                backgroundColor: t.primaryDim, border: `1px solid ${t.primary}30`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px', fontWeight: '800', color: t.primary, flexShrink: 0,
+              }}>
+                {dia.day_number}
+              </div>
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '15px' }}>
+                  Día {dia.day_number}
+                  {dia.day_number <= 6 && (
+                    <span style={{ color: t.text2, fontWeight: '400', fontSize: '13px', marginLeft: '8px' }}>
+                      {DAY_NAMES[dia.day_number - 1]}
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: t.text2, fontSize: '13px', marginTop: '2px' }}>
+                  Ver ejercicios planificados
+                </div>
+              </div>
+              <span style={{ marginLeft: 'auto', color: t.text3, fontSize: '20px' }}>›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default DiasView;

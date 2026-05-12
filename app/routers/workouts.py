@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app import models
 from app.dependencies import get_db
 from app.utils import calc_e1rm
-from app.schemas import PlannedWorkoutCreate, SetCreate, SetUpdate, BatchSetCreate
+from app.schemas import PlannedWorkoutCreate, PlannedWorkoutUpdate, SetCreate, SetUpdate, SetCapUpdate, SetPlanUpdate, BatchSetCreate
 
 router = APIRouter(tags=["workouts"])
 
@@ -31,10 +31,12 @@ def obtener_entrenos(day_id: int, db: Session = Depends(get_db)):
             "plan_id": plan.id,
             "ejercicio_id": plan.exercise_id,
             "ejercicio_nombre": nombre,
+            "exercise_category": ejercicio.category,
             "target_weight": plan.target_weight,
             "target_reps": plan.target_reps,
             "target_rpe": plan.target_rpe,
             "modifier": plan.modifier,
+            "weight_cap": plan.weight_cap,
             "num_sets": len(series),
             "series": [
                 {
@@ -45,6 +47,9 @@ def obtener_entrenos(day_id: int, db: Session = Depends(get_db)):
                     "weight": s.weight,
                     "reps": s.reps,
                     "rpe": s.rpe,
+                    "estimated_1rm": s.estimated_1rm,
+                    "weight_cap": s.weight_cap,
+                    "note": s.note,
                 }
                 for s in series
             ],
@@ -54,6 +59,29 @@ def obtener_entrenos(day_id: int, db: Session = Depends(get_db)):
 
 @router.post("/planned_workouts/")
 def crear_planificado(data: PlannedWorkoutCreate, db: Session = Depends(get_db)):
+    num_sets = max(data.num_sets or 1, 1)
+
+    # If this exercise already exists in the day, add sets to it instead of creating a duplicate
+    existing = db.query(models.PlannedWorkout).filter(
+        models.PlannedWorkout.day_id == data.day_id,
+        models.PlannedWorkout.exercise_id == data.exercise_id,
+    ).first()
+
+    if existing:
+        db.add_all([
+            models.Set(
+                workout_id=existing.id,
+                exercise_id=data.exercise_id,
+                planned_weight=data.target_weight,
+                planned_reps=data.target_reps,
+                planned_rpe=data.target_rpe,
+                weight=None, reps=None, rpe=None, estimated_1rm=0,
+            )
+            for _ in range(num_sets)
+        ])
+        db.commit()
+        return {"mensaje": "Series añadidas al ejercicio existente", "plan_id": existing.id}
+
     pw = models.PlannedWorkout(
         day_id=data.day_id,
         exercise_id=data.exercise_id,
@@ -61,6 +89,7 @@ def crear_planificado(data: PlannedWorkoutCreate, db: Session = Depends(get_db))
         target_reps=data.target_reps,
         target_rpe=data.target_rpe,
         modifier=data.modifier,
+        weight_cap=data.weight_cap,
     )
     db.add(pw)
     db.flush()
@@ -74,7 +103,7 @@ def crear_planificado(data: PlannedWorkoutCreate, db: Session = Depends(get_db))
             planned_rpe=data.target_rpe,
             weight=None, reps=None, rpe=None, estimated_1rm=0,
         )
-        for _ in range(max(data.num_sets or 1, 1))
+        for _ in range(num_sets)
     ])
     db.commit()
     return {"mensaje": "Entrenamiento planificado", "plan_id": pw.id}
@@ -91,6 +120,54 @@ def eliminar_planificado(plan_id: int, db: Session = Depends(get_db)):
     return {"mensaje": "Eliminado"}
 
 
+@router.put("/planned_workouts/{plan_id}/")
+def actualizar_planificado(plan_id: int, data: PlannedWorkoutUpdate, db: Session = Depends(get_db)):
+    pw = db.query(models.PlannedWorkout).filter(models.PlannedWorkout.id == plan_id).first()
+    if not pw:
+        raise HTTPException(status_code=404, detail="No encontrado")
+
+    pw.target_weight = data.target_weight
+    pw.target_reps = data.target_reps
+    pw.target_rpe = data.target_rpe
+    pw.modifier = data.modifier
+    pw.weight_cap = data.weight_cap
+
+    # Adjust set count if requested
+    if data.num_sets is not None:
+        existing = db.query(models.Set).filter(models.Set.workout_id == pw.id).all()
+        current = len(existing)
+        target = max(data.num_sets, 1)
+        if target > current:
+            db.add_all([
+                models.Set(
+                    workout_id=pw.id, exercise_id=pw.exercise_id,
+                    planned_weight=data.target_weight,
+                    planned_reps=data.target_reps, planned_rpe=data.target_rpe,
+                    weight=None, reps=None, rpe=None, estimated_1rm=0,
+                )
+                for _ in range(target - current)
+            ])
+        elif target < current:
+            # Remove unexecuted sets first, then executed if needed
+            unexecuted = [s for s in existing if s.weight is None]
+            to_delete = existing if not unexecuted else unexecuted
+            for s in to_delete[:current - target]:
+                db.delete(s)
+
+    # Sync planned values on all unexecuted sets
+    db.query(models.Set).filter(
+        models.Set.workout_id == pw.id,
+        models.Set.weight == None,
+    ).update({
+        "planned_weight": data.target_weight,
+        "planned_reps": data.target_reps,
+        "planned_rpe": data.target_rpe,
+    })
+
+    db.commit()
+    return {"mensaje": "Actualizado", "plan_id": pw.id}
+
+
 @router.get("/planned_workouts/{plan_id}/series/")
 def obtener_series(plan_id: int, db: Session = Depends(get_db)):
     series = db.query(models.Set).filter(models.Set.workout_id == plan_id).all()
@@ -105,6 +182,8 @@ def obtener_series(plan_id: int, db: Session = Depends(get_db)):
                 "weight": s.weight,
                 "reps": s.reps,
                 "rpe": s.rpe,
+                "estimated_1rm": s.estimated_1rm,
+                "note": s.note,
             }
             for s in series
         ],
@@ -127,15 +206,77 @@ def registrar_serie(data: SetCreate, db: Session = Depends(get_db)):
 
 @router.put("/series/{set_id}/")
 def actualizar_serie(set_id: int, data: SetUpdate, db: Session = Depends(get_db)):
+    from datetime import datetime
     s = db.query(models.Set).filter(models.Set.id == set_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Serie no encontrada")
-    s.weight = data.weight
-    s.reps = data.reps
-    s.rpe = data.rpe
-    s.estimated_1rm = calc_e1rm(data.weight, data.reps, data.rpe) if data.weight else 0
+    if data.weight is not None:
+        s.weight = data.weight
+    if data.reps is not None:
+        s.reps = data.reps
+    if data.rpe is not None:
+        s.rpe = data.rpe
+    if s.weight and s.reps and s.rpe:
+        s.estimated_1rm = calc_e1rm(s.weight, s.reps, s.rpe)
+        if not s.logged_at:
+            s.logged_at = datetime.utcnow().isoformat()
+    if data.note is not None:
+        s.note = data.note
     db.commit()
     return {"set_id": s.id, "e1rm": s.estimated_1rm}
+
+
+@router.put("/series/{set_id}/plan/")
+def update_set_plan(set_id: int, data: SetPlanUpdate, db: Session = Depends(get_db)):
+    s = db.query(models.Set).filter(models.Set.id == set_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Serie no encontrada")
+    if data.planned_weight is not None:
+        s.planned_weight = data.planned_weight
+    if data.planned_reps is not None:
+        s.planned_reps = data.planned_reps
+    if data.planned_rpe is not None:
+        s.planned_rpe = data.planned_rpe
+    db.commit()
+    return {"set_id": s.id}
+
+
+@router.delete("/series/{set_id}/")
+def delete_set(set_id: int, db: Session = Depends(get_db)):
+    s = db.query(models.Set).filter(models.Set.id == set_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Serie no encontrada")
+    db.delete(s)
+    db.commit()
+    return {"mensaje": "Eliminada"}
+
+
+@router.put("/series/{set_id}/planned/")
+def actualizar_serie_planificada(set_id: int, data: SetCapUpdate, db: Session = Depends(get_db)):
+    s = db.query(models.Set).filter(models.Set.id == set_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Serie no encontrada")
+    s.weight_cap = data.weight_cap
+    db.commit()
+    return {"set_id": s.id}
+
+
+@router.post("/planned_workouts/{plan_id}/series/add/")
+def add_blank_set(plan_id: int, db: Session = Depends(get_db)):
+    pw = db.query(models.PlannedWorkout).filter(models.PlannedWorkout.id == plan_id).first()
+    if not pw:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    s = models.Set(
+        workout_id=pw.id, exercise_id=pw.exercise_id,
+        planned_weight=pw.target_weight,
+        planned_reps=pw.target_reps,
+        planned_rpe=pw.target_rpe,
+        weight=None, reps=None, rpe=None, estimated_1rm=0,
+    )
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return {"id": s.id, "planned_weight": s.planned_weight, "planned_reps": s.planned_reps, "planned_rpe": s.planned_rpe, "weight": None, "reps": None, "rpe": None, "estimated_1rm": None}
 
 
 @router.post("/series/batch/")

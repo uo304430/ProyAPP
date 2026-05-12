@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { t, input, btnPrimary, label } from '../styles/theme';
 
-const API = 'http://127.0.0.1:8000';
+const API = '/api';
 
 const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
   const [email, setEmail] = useState('');
@@ -42,7 +42,7 @@ const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
               borderRadius: '9px', display: 'inline-flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '18px',
             }}>⚡</span>
-            <span style={{ color: t.text }}>Progresar</span>
+            <span style={{ color: t.text }}>PowerApp</span>
           </div>
           <p style={{ color: t.text2, fontSize: '14px', marginTop: '8px' }}>
             Tu plataforma de powerlifting
@@ -63,7 +63,7 @@ const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
             <div>
               <label style={label}>Email</label>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                type="email" value={email} onChange={e => setEmail(e.target.value.toLowerCase())}
                 required placeholder="tu@email.com"
                 style={input}
                 onFocus={e => e.target.style.borderColor = t.primary}

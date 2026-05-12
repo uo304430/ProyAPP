@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { t, btnPrimary, btnDanger } from '../styles/theme';
 
-const API = 'http://127.0.0.1:8000';
+const API = '/api';
 
 const OBJECTIVE_LABELS = {
   acumulacion: { label: 'Acumulación', color: t.info },
@@ -11,7 +11,7 @@ const OBJECTIVE_LABELS = {
   descarga: { label: 'Descarga', color: t.text2 },
 };
 
-const BloquesView = ({ athleteId, onSelectBlock, onBack, onCreateBlock }) => {
+const BloquesView = ({ athleteId, userId, viewingAthleteName, onSelectBlock, onEditBlock, onBack, onCreateBlock }) => {
   const [bloques, setBloques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,6 +37,21 @@ const BloquesView = ({ athleteId, onSelectBlock, onBack, onCreateBlock }) => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '32px 20px' }}>
       <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+
+        {/* Coach viewing athlete banner */}
+        {viewingAthleteName && (
+          <div style={{
+            backgroundColor: t.infoDim, border: `1px solid ${t.info}30`,
+            borderRadius: '10px', padding: '10px 16px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px',
+          }}>
+            <span style={{ fontSize: '16px' }}>👁️</span>
+            <span style={{ color: t.text2 }}>
+              Viendo bloques de{' '}
+              <span style={{ color: t.info, fontWeight: '600' }}>{viewingAthleteName}</span>
+            </span>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
@@ -124,7 +139,20 @@ const BloquesView = ({ athleteId, onSelectBlock, onBack, onCreateBlock }) => {
                     {b.num_weeks} semana{b.num_weeks !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {userId === b.coach_id && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onEditBlock(b.id); }}
+                      style={{
+                        padding: '7px 14px', borderRadius: '8px', cursor: 'pointer',
+                        fontSize: '13px', fontWeight: '500',
+                        backgroundColor: t.surface3, color: t.text2,
+                        border: `1px solid ${t.border2}`,
+                      }}
+                    >
+                      Editar
+                    </button>
+                  )}
                   <button
                     onClick={e => eliminar(e, b.id)}
                     style={btnDanger}

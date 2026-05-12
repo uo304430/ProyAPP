@@ -19,12 +19,12 @@ def crear_ejercicio(ej: ExerciseCreate, db: Session = Depends(get_db)):
         models.Exercise.name == ej.name, models.Exercise.variant == variant
     ).first():
         raise HTTPException(status_code=400, detail="Este ejercicio ya existe")
-    nuevo = models.Exercise(name=ej.name, category=ej.category, variant=variant)
+    nuevo = models.Exercise(name=ej.name, category=ej.category, variant=variant, subcategory=ej.subcategory)
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
     return {
         "mensaje": "Ejercicio creado",
         "id": nuevo.id,
-        "ejercicio": {"id": nuevo.id, "name": nuevo.name, "category": nuevo.category, "variant": nuevo.variant},
+        "ejercicio": {"id": nuevo.id, "name": nuevo.name, "category": nuevo.category, "variant": nuevo.variant, "subcategory": nuevo.subcategory},
     }

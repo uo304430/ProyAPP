@@ -10,10 +10,11 @@ router = APIRouter(tags=["auth"])
 
 @router.post("/register/")
 def registrar_usuario(user_data: UserCreate, db: Session = Depends(get_db)):
-    if db.query(models.User).filter(models.User.email == user_data.email).first():
+    email = user_data.email.lower().strip()
+    if db.query(models.User).filter(models.User.email == email).first():
         raise HTTPException(status_code=400, detail="El email ya está registrado")
     hashed = bcrypt.hashpw(user_data.password.encode(), bcrypt.gensalt()).decode()
-    user = models.User(email=user_data.email, hashed_password=hashed, role=user_data.role)
+    user = models.User(email=email, hashed_password=hashed, role=user_data.role)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -22,7 +23,8 @@ def registrar_usuario(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login/")
 def iniciar_sesion(user_data: UserCreate, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    email = user_data.email.lower().strip()
+    user = db.query(models.User).filter(models.User.email == email).first()
     if not user:
         raise HTTPException(status_code=400, detail="Usuario no encontrado")
     if not bcrypt.checkpw(user_data.password.encode(), user.hashed_password.encode()):
