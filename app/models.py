@@ -131,6 +131,16 @@ class WeeklyCheckin(Base):
     created_at = Column(String, nullable=True)
 
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(String)   # ISO datetime
+    used = Column(Integer, default=0)
+
+
 class Competition(Base):
     __tablename__ = "competitions"
 

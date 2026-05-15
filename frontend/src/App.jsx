@@ -1,4 +1,4 @@
-import React, { useState, Component } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import axios from 'axios';
 import { t } from './styles/theme';
 
@@ -32,16 +32,36 @@ import EjecucionSerieView from './components/EjecucionSerieView';
 import EditarBloqueView from './components/EditarBloqueView';
 import ConexionesView from './components/ConexionesView';
 import PerfilView from './components/PerfilView';
+import ForgotPasswordView from './components/ForgotPasswordView';
+import ResetPasswordView from './components/ResetPasswordView';
 import CalendarioView from './components/CalendarioView';
 import CoachPanelView from './components/CoachPanelView';
 import DashboardView from './components/DashboardView';
 import CheckinView from './components/CheckinView';
 import CompetitionsView from './components/CompetitionsView';
 
-const ANON_VIEWS = ['login', 'register'];
+const ANON_VIEWS = ['login', 'register', 'forgot-password', 'reset-password'];
+
+function parseResetToken() {
+  const match = window.location.hash.match(/[?&]token=([^&]+)/);
+  return match ? match[1] : null;
+}
 
 function App() {
-  const [view, setView] = useState('login');
+  const [view, setView] = useState(() => parseResetToken() ? 'reset-password' : 'login');
+  const [resetToken, setResetToken] = useState(parseResetToken);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const token = parseResetToken();
+      if (token) {
+        setResetToken(token);
+        setView('reset-password');
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
   const [userId, setUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [selectedBlockId, setSelectedBlockId] = useState(null);
@@ -86,6 +106,18 @@ function App() {
         <LoginForm
           onLoginSuccess={handleAuthSuccess}
           onGoRegister={() => setView('register')}
+          onForgotPassword={() => setView('forgot-password')}
+        />
+      )}
+
+      {view === 'forgot-password' && (
+        <ForgotPasswordView onBack={() => setView('login')} />
+      )}
+
+      {view === 'reset-password' && (
+        <ResetPasswordView
+          token={resetToken}
+          onSuccess={() => { window.location.hash = ''; setView('login'); }}
         />
       )}
 

@@ -159,6 +159,7 @@ def _migrate():
             "ALTER TABLE users ADD COLUMN username TEXT",
             "ALTER TABLE profiles ADD COLUMN first_name TEXT",
             "ALTER TABLE profiles ADD COLUMN last_name TEXT",
+            "CREATE TABLE IF NOT EXISTS password_reset_tokens (id INTEGER PRIMARY KEY, user_id INTEGER, token TEXT UNIQUE, expires_at TEXT, used INTEGER DEFAULT 0)",
         ]:
             try:
                 db.execute(text(stmt))

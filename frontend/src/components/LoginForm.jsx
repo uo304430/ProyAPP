@@ -4,7 +4,7 @@ import { t, input, btnPrimary, label } from '../styles/theme';
 
 const API = '/api';
 
-const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
+const LoginForm = ({ onLoginSuccess, onGoRegister, onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -71,7 +71,18 @@ const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
               />
             </div>
             <div>
-              <label style={label}>Contraseña</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                <label style={label}>Contraseña</label>
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  style={{ background: 'none', border: 'none', color: t.text2, fontSize: '12px', cursor: 'pointer', padding: 0 }}
+                  onMouseEnter={e => e.currentTarget.style.color = t.primary}
+                  onMouseLeave={e => e.currentTarget.style.color = t.text2}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
                 required placeholder="••••••••"

@@ -153,6 +153,15 @@ class CompetitionCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 class CompetitionUpdate(BaseModel):
     name: Optional[str] = None
     date: Optional[str] = None
