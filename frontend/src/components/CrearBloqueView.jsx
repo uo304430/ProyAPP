@@ -146,18 +146,31 @@ const CreateExerciseInline = ({ onCreated, onCancel }) => {
 
 // ─── Step 1: Block config ─────────────────────────────────────────────────────
 
+const ALL_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
 const Step1 = ({ config, setConfig, onNext }) => {
   const weekOptions = [3, 4, 5, 6, 7, 8].map(n => ({ value: n, label: `${n}` }));
-  const dayOptions = [1, 2, 3, 4, 5, 6].map(n => ({ value: n, label: `${n}` }));
   const objectives = [
     { value: 'acumulacion', label: 'Acumulación' },
     { value: 'intensificacion', label: 'Intensificación' },
     { value: 'peaking', label: 'Peaking' },
     { value: 'descarga', label: 'Descarga' },
+    { value: 'custom', label: 'Personalizado' },
   ];
 
   const [customWeeks, setCustomWeeks] = useState('');
   const effectiveWeeks = customWeeks && parseInt(customWeeks) > 0 ? parseInt(customWeeks) : config.numWeeks;
+
+  // Selected training days (array of day names in order)
+  const selectedDays = config.dayNames || ['Lunes', 'Miércoles', 'Viernes'];
+
+  const toggleDay = (day) => {
+    const next = selectedDays.includes(day)
+      ? selectedDays.filter(d => d !== day)
+      : [...selectedDays, day].sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
+    if (next.length === 0) return; // must have at least 1
+    setConfig(c => ({ ...c, dayNames: next, daysPerWeek: next.length }));
+  };
 
   const handleCustomWeeks = (val) => {
     setCustomWeeks(val);
@@ -165,7 +178,9 @@ const Step1 = ({ config, setConfig, onNext }) => {
     if (n > 0) setConfig(c => ({ ...c, numWeeks: n }));
   };
 
-  const valid = config.name.trim().length > 0 && config.objective && effectiveWeeks > 0;
+  const valid = config.name.trim().length > 0 && config.objective &&
+    (config.objective !== 'custom' || (config.customObjective || '').trim().length > 0) &&
+    effectiveWeeks > 0 && selectedDays.length > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -182,7 +197,18 @@ const Step1 = ({ config, setConfig, onNext }) => {
 
       <div>
         <label style={label}>Objetivo del bloque</label>
-        <ChipSelect options={objectives} value={config.objective} onChange={v => setConfig(c => ({ ...c, objective: v }))} />
+        <ChipSelect options={objectives} value={config.objective} onChange={v => setConfig(c => ({ ...c, objective: v, customObjective: '' }))} />
+        {config.objective === 'custom' && (
+          <input
+            style={{ ...input, marginTop: '10px' }}
+            type="text"
+            value={config.customObjective || ''}
+            onChange={e => setConfig(c => ({ ...c, customObjective: e.target.value }))}
+            placeholder="Ej. Pretemporada, Fuerza máxima..."
+            onFocus={e => e.target.style.borderColor = t.primary}
+            onBlur={e => e.target.style.borderColor = t.border2}
+          />
+        )}
       </div>
 
       <div>
@@ -198,24 +224,35 @@ const Step1 = ({ config, setConfig, onNext }) => {
             type="number" min="1" max="52" value={customWeeks}
             onChange={e => handleCustomWeeks(e.target.value)}
             placeholder="ej. 10"
-            style={{
-              ...input, width: '80px', padding: '7px 10px', fontSize: '14px',
-              borderColor: customWeeks ? t.primary : t.border2,
-            }}
+            style={{ ...input, width: '80px', padding: '7px 10px', fontSize: '14px', borderColor: customWeeks ? t.primary : t.border2 }}
             onFocus={e => e.target.style.borderColor = t.primary}
             onBlur={e => e.target.style.borderColor = customWeeks ? t.primary : t.border2}
           />
-          {customWeeks && (
-            <span style={{ fontSize: '13px', color: t.primary, fontWeight: '600' }}>
-              {customWeeks} sem seleccionadas
-            </span>
-          )}
         </div>
       </div>
 
       <div>
-        <label style={label}>Sesiones por semana</label>
-        <ChipSelect options={dayOptions} value={config.daysPerWeek} onChange={v => setConfig(c => ({ ...c, daysPerWeek: v }))} />
+        <label style={label}>Días de entrenamiento</label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {ALL_DAYS.map(day => {
+            const sel = selectedDays.includes(day);
+            return (
+              <button key={day} type="button" onClick={() => toggleDay(day)}
+                style={{
+                  padding: '8px 13px', borderRadius: '9px', fontSize: '13px', fontWeight: sel ? '700' : '500',
+                  cursor: 'pointer', border: `1px solid ${sel ? t.primary : t.border2}`,
+                  backgroundColor: sel ? t.primaryDim : t.surface2,
+                  color: sel ? t.primary : t.text2,
+                  transition: 'all 100ms ease',
+                }}>
+                {day.slice(0, 3)}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ fontSize: '12px', color: t.text3, marginTop: '6px' }}>
+          {selectedDays.length} día{selectedDays.length !== 1 ? 's' : ''} seleccionado{selectedDays.length !== 1 ? 's' : ''}: {selectedDays.join(', ')}
+        </p>
       </div>
 
       <div>
@@ -224,37 +261,24 @@ const Step1 = ({ config, setConfig, onNext }) => {
           type="date"
           value={config.startDate || ''}
           onChange={e => setConfig(c => ({ ...c, startDate: e.target.value || null }))}
-          style={{
-            ...input,
-            colorScheme: 'dark',
-            width: 'auto',
-          }}
+          style={{ ...input, colorScheme: 'dark', width: 'auto' }}
           onFocus={e => e.target.style.borderColor = t.primary}
           onBlur={e => e.target.style.borderColor = t.border2}
         />
       </div>
 
       {/* Preview */}
-      <div style={{
-        backgroundColor: t.surface2, border: `1px solid ${t.border2}`,
-        borderRadius: '10px', padding: '14px 18px',
-        display: 'flex', gap: '24px', flexWrap: 'wrap',
-      }}>
+      <div style={{ backgroundColor: t.surface2, border: `1px solid ${t.border2}`, borderRadius: '10px', padding: '14px 18px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
         {[
           { val: `${effectiveWeeks} semanas` },
-          { val: `${config.daysPerWeek} días/semana` },
-          { val: `${effectiveWeeks * config.daysPerWeek} sesiones totales` },
+          { val: `${selectedDays.length} días/semana` },
+          { val: `${effectiveWeeks * selectedDays.length} sesiones totales` },
         ].map(item => (
-          <div key={item.val} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '13px', color: t.text2 }}>{item.val}</span>
-          </div>
+          <span key={item.val} style={{ fontSize: '13px', color: t.text2 }}>{item.val}</span>
         ))}
       </div>
 
-      <button
-        onClick={onNext} disabled={!valid}
-        style={{ ...btnPrimary, width: '100%', opacity: valid ? 1 : 0.4 }}
-      >
+      <button onClick={onNext} disabled={!valid} style={{ ...btnPrimary, width: '100%', opacity: valid ? 1 : 0.4 }}>
         Continuar →
       </button>
     </div>
@@ -333,7 +357,10 @@ const Step2ExCard = ({ plan, onDeleted }) => {
   );
 };
 
-const Step2AddInline = ({ exercises, dayId, onAdded, onCancel }) => {
+const S2_CATEGORIES = ['basic', 'accessory', 'cardio', 'mobility'];
+
+const Step2AddInline = ({ exercises: initialExercises, dayId, onAdded, onCancel, userId }) => {
+  const [exercises, setExercises] = useState(initialExercises);
   const [exId, setExId] = useState('');
   const [sets, setSets] = useState('3');
   const [reps, setReps] = useState('5');
@@ -342,14 +369,43 @@ const Step2AddInline = ({ exercises, dayId, onAdded, onCancel }) => {
   const [query, setQuery] = useState('');
   const [showDrop, setShowDrop] = useState(false);
 
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('accessory');
+  const [newVariant, setNewVariant] = useState('');
+  const [creating, setCreating] = useState(false);
+
   const filtered = query.length >= 1
     ? exercises.filter(e => (e.name + (e.variant ? ` (${e.variant})` : '')).toLowerCase().includes(query.toLowerCase())).slice(0, 8)
     : [];
+
+  const noResults = query.length >= 2 && filtered.length === 0;
 
   const handleSelect = (ex) => {
     setExId(String(ex.id));
     setQuery(ex.name + (ex.variant ? ` (${ex.variant})` : ''));
     setShowDrop(false);
+    setShowCreate(false);
+  };
+
+  const handleCreateExercise = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      const { data } = await axios.post(`${API}/ejercicios/`, {
+        name: newName.trim(),
+        category: newCategory,
+        variant: newVariant.trim() || null,
+        user_id: userId || null,
+      });
+      const created = data.ejercicio;
+      setExercises(prev => [...prev, created]);
+      handleSelect(created);
+      setShowCreate(false);
+      setNewName(''); setNewVariant('');
+    } catch (e) {
+      if (e.response?.status === 400) alert('Este ejercicio ya existe.');
+    } finally { setCreating(false); }
   };
 
   const handleSave = async () => {
@@ -370,12 +426,12 @@ const Step2AddInline = ({ exercises, dayId, onAdded, onCancel }) => {
     <div style={{ backgroundColor: t.surface, border: `1px solid ${t.primary}40`, borderRadius: '12px', padding: '12px 14px', marginBottom: '10px' }}>
       <div style={{ position: 'relative', marginBottom: '8px' }}>
         <input type="text" value={query}
-          onChange={e => { setQuery(e.target.value); setExId(''); setShowDrop(true); }}
-          onFocus={() => setShowDrop(true)} onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+          onChange={e => { setQuery(e.target.value); setExId(''); setShowDrop(true); setShowCreate(false); }}
+          onFocus={() => setShowDrop(true)} onBlur={() => setTimeout(() => setShowDrop(false), 180)}
           placeholder="Buscar ejercicio..."
           style={{ width: '100%', boxSizing: 'border-box', backgroundColor: t.surface2, border: `1px solid ${t.border2}`, borderRadius: '8px', padding: '8px 12px', color: t.text, fontSize: '13px', outline: 'none' }}
         />
-        {showDrop && filtered.length > 0 && (
+        {showDrop && (filtered.length > 0 || noResults) && (
           <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', maxHeight: '200px', overflowY: 'auto', marginTop: '3px' }}>
             {filtered.map(ex => (
               <button key={ex.id} onMouseDown={() => handleSelect(ex)}
@@ -384,9 +440,52 @@ const Step2AddInline = ({ exercises, dayId, onAdded, onCancel }) => {
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
               >{ex.name}{ex.variant ? ` (${ex.variant})` : ''}</button>
             ))}
+            {noResults && (
+              <button onMouseDown={() => { setNewName(query); setShowCreate(true); setShowDrop(false); }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', color: t.primary, fontSize: '13px', fontWeight: '600' }}>
+                + Crear «{query}»
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {showCreate && (
+        <div style={{ backgroundColor: t.surface2, borderRadius: '9px', padding: '10px', marginBottom: '8px', border: `1px solid ${t.border}` }}>
+          <p style={{ fontSize: '10px', fontWeight: '600', color: t.primary, letterSpacing: '0.4px', marginBottom: '7px' }}>NUEVO EJERCICIO</p>
+          <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="Nombre"
+            style={{ width: '100%', boxSizing: 'border-box', backgroundColor: t.surface, border: `1px solid ${t.border2}`, borderRadius: '7px', padding: '6px 10px', color: t.text, fontSize: '13px', outline: 'none', marginBottom: '6px' }}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '7px' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: t.text3, marginBottom: '2px', letterSpacing: '0.4px' }}>CATEGORÍA</div>
+              <select value={newCategory} onChange={e => setNewCategory(e.target.value)}
+                style={{ width: '100%', backgroundColor: t.surface, border: `1px solid ${t.border2}`, borderRadius: '6px', padding: '6px 7px', color: t.text, fontSize: '12px', outline: 'none' }}>
+                {S2_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: t.text3, marginBottom: '2px', letterSpacing: '0.4px' }}>VARIANTE (opc.)</div>
+              <input type="text" value={newVariant} onChange={e => setNewVariant(e.target.value)}
+                placeholder="p.ej. paused"
+                style={{ width: '100%', boxSizing: 'border-box', backgroundColor: t.surface, border: `1px solid ${t.border2}`, borderRadius: '6px', padding: '6px 7px', color: t.text, fontSize: '12px', outline: 'none' }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={handleCreateExercise} disabled={!newName.trim() || creating}
+              style={{ flex: 2, padding: '6px', borderRadius: '6px', border: 'none', backgroundColor: newName.trim() ? t.primary : t.surface3, color: newName.trim() ? t.bg : t.text3, fontWeight: '700', fontSize: '12px', cursor: newName.trim() ? 'pointer' : 'default' }}>
+              {creating ? '...' : 'Crear y añadir'}
+            </button>
+            <button onClick={() => setShowCreate(false)}
+              style={{ flex: 1, padding: '6px', borderRadius: '6px', border: `1px solid ${t.border2}`, background: 'none', color: t.text2, fontSize: '12px', cursor: 'pointer' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 12px 1fr 12px 1fr', alignItems: 'center', gap: '5px', marginBottom: '8px' }}>
         {[
           { v: sets, s: setSets, lbl: 'SERIES' },
@@ -419,7 +518,7 @@ const Step2AddInline = ({ exercises, dayId, onAdded, onCancel }) => {
   );
 };
 
-const Step2 = ({ blockId, athleteId, daysPerWeek, onNext, onBack }) => {
+const Step2 = ({ blockId, athleteId, userId, daysPerWeek, dayNames, onNext, onBack }) => {
   const [selectedDay, setSelectedDay] = useState(1);
   const [exercises, setExercises] = useState([]);
   const [dayWorkouts, setDayWorkouts] = useState({});   // { dayNum: [entrenos] }
@@ -430,7 +529,7 @@ const Step2 = ({ blockId, athleteId, daysPerWeek, onNext, onBack }) => {
   const [copying, setCopying] = useState(false);
 
   useEffect(() => {
-    axios.get(`${API}/ejercicios/`).then(r => setExercises(r.data.ejercicios || []));
+    axios.get(`${API}/ejercicios/`, { params: userId ? { user_id: userId } : {} }).then(r => setExercises(r.data.ejercicios || []));
     if (athleteId) {
       axios.get(`${API}/atleta/${athleteId}/blocks/`)
         .then(r => setAvailableBlocks((r.data.bloques || []).filter(b => b.id !== blockId)))
@@ -493,7 +592,9 @@ const Step2 = ({ blockId, athleteId, daysPerWeek, onNext, onBack }) => {
               onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = t.surface2; }}
               onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
-              <span style={{ fontWeight: active ? '700' : '500', fontSize: '13px', color: active ? t.primary : t.text }}>Día {d}</span>
+              <span style={{ fontWeight: active ? '700' : '500', fontSize: '13px', color: active ? t.primary : t.text }}>
+                {dayNames?.[d - 1] || `Día ${d}`}
+              </span>
               {hasEx && <span style={{ position: 'absolute', top: '6px', right: '8px', width: '6px', height: '6px', backgroundColor: t.primary, borderRadius: '50%' }} />}
             </button>
           );
@@ -537,7 +638,7 @@ const Step2 = ({ blockId, athleteId, daysPerWeek, onNext, onBack }) => {
         ))}
 
         {showAdd && currentDayId ? (
-          <Step2AddInline exercises={exercises} dayId={currentDayId}
+          <Step2AddInline exercises={exercises} dayId={currentDayId} userId={userId}
             onAdded={(list) => { setDayWorkouts(prev => ({ ...prev, [selectedDay]: list })); setShowAdd(false); }}
             onCancel={() => setShowAdd(false)}
           />
@@ -700,10 +801,10 @@ const Step3 = ({ config, blockId, onFinish, onBack }) => {
 
 // ─── Main wizard ─────────────────────────────────────────────────────────────
 
-const CrearBloqueView = ({ coachId, athleteId, onBlockCreated, onFinished, onBack }) => {
+const CrearBloqueView = ({ coachId, athleteId, userId, onBlockCreated, onFinished, onBack }) => {
   const [step, setStep] = useState(1);
   const [blockId, setBlockId] = useState(null);
-  const [config, setConfig] = useState({ name: '', objective: '', numWeeks: 4, daysPerWeek: 4, startDate: null });
+  const [config, setConfig] = useState({ name: '', objective: '', numWeeks: 4, daysPerWeek: 3, startDate: null, dayNames: ['Lunes', 'Miércoles', 'Viernes'] });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
@@ -711,14 +812,22 @@ const CrearBloqueView = ({ coachId, athleteId, onBlockCreated, onFinished, onBac
     setCreating(true);
     setCreateError('');
     try {
+      if (blockId) {
+        try { await axios.delete(`${API}/blocks/${blockId}/`); } catch {}
+        setBlockId(null);
+      }
+      const objectiveValue = config.objective === 'custom'
+        ? (config.customObjective || '').trim()
+        : config.objective;
       const { data } = await axios.post(`${API}/blocks/full/`, {
         name: config.name,
         coach_id: parseInt(coachId) || 1,
         athlete_id: parseInt(athleteId) || 1,
         num_weeks: config.numWeeks,
         days_per_week: config.daysPerWeek,
-        objective: config.objective,
+        objective: objectiveValue,
         start_date: config.startDate || null,
+        day_names: config.dayNames || null,
       });
       setBlockId(data.bloque_id);
       onBlockCreated?.(data.bloque_id);
@@ -743,7 +852,7 @@ const CrearBloqueView = ({ coachId, athleteId, onBlockCreated, onFinished, onBac
       <div style={{ maxWidth: '680px', margin: '0 auto' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '36px' }}>
-          <button onClick={handleExit} style={{
+          <button onClick={step === 1 ? handleExit : () => setStep(s => s - 1)} style={{
             background: 'none', border: `1px solid ${t.border2}`, borderRadius: '8px',
             width: '36px', height: '36px', cursor: 'pointer', color: t.text2, fontSize: '18px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -763,7 +872,7 @@ const CrearBloqueView = ({ coachId, athleteId, onBlockCreated, onFinished, onBac
         )}
 
         {step === 1 && <Step1 config={config} setConfig={setConfig} onNext={creating ? undefined : handleStep1Next} />}
-        {step === 2 && blockId && <Step2 blockId={blockId} athleteId={athleteId} daysPerWeek={config.daysPerWeek} onNext={() => setStep(3)} onBack={handleExit} />}
+        {step === 2 && blockId && <Step2 blockId={blockId} athleteId={athleteId} userId={userId} daysPerWeek={config.daysPerWeek} dayNames={config.dayNames} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
         {step === 3 && blockId && <Step3 config={config} blockId={blockId} onFinish={onFinished} onBack={() => setStep(2)} />}
       </div>
     </div>

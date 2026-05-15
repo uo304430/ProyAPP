@@ -10,14 +10,16 @@ class Exercise(Base):
     category = Column(String)
     variant = Column(String, nullable=True)
     subcategory = Column(String, nullable=True)
+    user_id = Column(Integer, nullable=True)  # NULL = global library, set = user-private
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String)
+    username = Column(String, unique=True, nullable=True, index=True)
 
 class CoachAthlete(Base):
     __tablename__ = "coach_athlete"
@@ -38,6 +40,8 @@ class Profile(Base):
     squat_pr = Column(Float, nullable=True)
     bench_pr = Column(Float, nullable=True)
     deadlift_pr = Column(Float, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
 
 class Block(Base):
     __tablename__ = "blocks"
@@ -57,9 +61,10 @@ class Week(Base):
     id = Column(Integer, primary_key=True, index=True)
     block_id = Column(Integer, ForeignKey("blocks.id"), index=True)
     week_number = Column(Integer)
+    published = Column(Integer, default=0)  # 0 = borrador, 1 = publicada (visible para el atleta)
 
     block = relationship("Block", back_populates="weeks")
-    
+
     # Relación en cascada con los días
     days = relationship("Day", back_populates="week", cascade="all, delete-orphan")
 
@@ -69,6 +74,7 @@ class Day(Base):
     id = Column(Integer, primary_key=True, index=True)
     week_id = Column(Integer, ForeignKey("weeks.id"), index=True)
     day_number = Column(Integer)
+    day_name = Column(String, nullable=True)  # e.g. "Lunes", "Miércoles"
 
     week = relationship("Week", back_populates="days")
     planned_workouts = relationship("PlannedWorkout", cascade="all, delete-orphan")

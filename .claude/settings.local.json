@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "PowerShell(node -e \"const puppeteer = require\\('puppeteer'\\)\" 2>&1)",
+      "PowerShell(npx playwright --version 2>&1)"
     ]
   }
 }

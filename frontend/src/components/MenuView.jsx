@@ -103,7 +103,7 @@ const MenuView = ({ userId, userRole, setView, onViewAthleteBlocks, onViewCalend
       <div style={{ maxWidth: '640px', margin: '0 auto 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ width: '32px', height: '32px', backgroundColor: t.primary, borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>⚡</span>
-          <span style={{ fontWeight: '700', fontSize: '18px', letterSpacing: '-0.3px' }}>PowerApp</span>
+          <span style={{ fontWeight: '700', fontSize: '18px', letterSpacing: '-0.3px' }}>B2L</span>
         </div>
         <button onClick={() => setView('login')} style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '8px', padding: '7px 14px', color: t.text2, fontSize: '13px', cursor: 'pointer' }}>
           Cerrar sesión

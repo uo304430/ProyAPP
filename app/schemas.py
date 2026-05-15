@@ -6,6 +6,9 @@ class UserCreate(BaseModel):
     email: str
     password: str
     role: str
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class CoachAthleteLink(BaseModel):
@@ -24,6 +27,7 @@ class BlockCreate(BaseModel):
 class BlockCreateFull(BlockCreate):
     num_weeks: int
     days_per_week: int
+    day_names: Optional[List[str]] = None  # e.g. ["Lunes","Miércoles","Viernes"]
 
 
 class ReplicateTemplate(BaseModel):
@@ -47,6 +51,7 @@ class ExerciseCreate(BaseModel):
     category: str
     variant: Optional[str] = None
     subcategory: Optional[str] = None
+    user_id: Optional[int] = None
 
 
 class PlannedWorkoutCreate(BaseModel):
@@ -114,7 +119,8 @@ class BatchSetCreate(BaseModel):
 
 class ConnectionRequestCreate(BaseModel):
     from_user_id: int
-    to_email: str
+    to_email: Optional[str] = None       # email search (legacy)
+    to_identifier: Optional[str] = None  # email or @username
 
 
 class ProfileUpsert(BaseModel):

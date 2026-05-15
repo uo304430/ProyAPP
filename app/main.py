@@ -77,7 +77,7 @@ EXERCISE_LIBRARY = [
     {"name": "Deadlift", "category": "basic", "variant": "Block Pull 1in",             "subcategory": "Rango"},
     {"name": "Deadlift", "category": "basic", "variant": "Block Pull 2in",             "subcategory": "Rango"},
     {"name": "Deadlift", "category": "basic", "variant": "Block Pull 3in",             "subcategory": "Rango"},
-    {"name": "Deadlift", "category": "basic", "variant": "Block Pull 5in",             "subcategory": "Rango"},
+    {"name": "Deadlift", "category": "basic", "variant": "Block Pull 5in",              "subcategory": "Rango"},
     {"name": "Deadlift", "category": "basic", "variant": "Rack Pull",                  "subcategory": "Rango"},
     {"name": "Deadlift", "category": "basic", "variant": "Paused 1ct (Off Floor)",     "subcategory": "Pausa"},
     {"name": "Deadlift", "category": "basic", "variant": "Paused 2ct (Off Floor)",     "subcategory": "Pausa"},
@@ -153,6 +153,12 @@ def _migrate():
     try:
         for stmt in [
             "ALTER TABLE sets ADD COLUMN logged_at TEXT",
+            "ALTER TABLE weeks ADD COLUMN published INTEGER DEFAULT 0",
+            "ALTER TABLE days ADD COLUMN day_name TEXT",
+            "ALTER TABLE exercises ADD COLUMN user_id INTEGER",
+            "ALTER TABLE users ADD COLUMN username TEXT",
+            "ALTER TABLE profiles ADD COLUMN first_name TEXT",
+            "ALTER TABLE profiles ADD COLUMN last_name TEXT",
         ]:
             try:
                 db.execute(text(stmt))
@@ -191,7 +197,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Powerlifting SaaS", lifespan=lifespan)
+app = FastAPI(title="B2L", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

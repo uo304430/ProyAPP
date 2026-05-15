@@ -96,8 +96,8 @@ const CalendarioView = ({ userId, onBack }) => {
   }));
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '28px 16px' }}>
-      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: t.bg, padding: '20px 8px' }}>
+      <div style={{ maxWidth: '100%', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
@@ -129,7 +129,7 @@ const CalendarioView = ({ userId, onBack }) => {
           {/* Day headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${t.border}` }}>
             {DAYS_ES.map(d => (
-              <div key={d} style={{ padding: '10px 0', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: t.text3, letterSpacing: '0.5px' }}>{d}</div>
+              <div key={d} style={{ padding: '8px 0', textAlign: 'center', fontSize: '10px', fontWeight: '700', color: t.text3, letterSpacing: '0.5px' }}>{d}</div>
             ))}
           </div>
 
@@ -148,8 +148,8 @@ const CalendarioView = ({ userId, onBack }) => {
                   key={i}
                   onClick={() => day && hasSessions && handleDayClick(day)}
                   style={{
-                    minHeight: '72px',
-                    padding: '8px 6px',
+                    minHeight: '80px',
+                    padding: '6px 4px',
                     borderRight: i % 7 < 6 ? `1px solid ${t.border}` : 'none',
                     borderBottom: i < cells.length - 7 ? `1px solid ${t.border}` : 'none',
                     cursor: day && hasSessions ? 'pointer' : 'default',
@@ -162,10 +162,10 @@ const CalendarioView = ({ userId, onBack }) => {
                   {day && (
                     <>
                       <div style={{
-                        fontSize: '13px', fontWeight: isToday ? '800' : '500',
+                        fontSize: '11px', fontWeight: isToday ? '800' : '500',
                         color: isToday ? t.primary : isWeekend ? t.text3 : t.text,
-                        marginBottom: '6px', textAlign: 'right',
-                        ...(isToday && { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', backgroundColor: `${t.primary}20`, borderRadius: '50%', float: 'right' }),
+                        marginBottom: '4px', textAlign: 'right',
+                        ...(isToday && { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', backgroundColor: `${t.primary}20`, borderRadius: '50%', float: 'right' }),
                       }}>
                         {day}
                       </div>
@@ -175,11 +175,11 @@ const CalendarioView = ({ userId, onBack }) => {
                             display: 'flex', alignItems: 'center', gap: '4px',
                             backgroundColor: `${BLOCK_COLORS[blockColorMap[s.block_id] % BLOCK_COLORS.length]}18`,
                             border: `1px solid ${BLOCK_COLORS[blockColorMap[s.block_id] % BLOCK_COLORS.length]}40`,
-                            borderRadius: '4px', padding: '2px 5px',
+                            borderRadius: '3px', padding: '2px 3px',
                           }}>
                             <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: BLOCK_COLORS[blockColorMap[s.block_id] % BLOCK_COLORS.length], flexShrink: 0 }} />
                             <span style={{ fontSize: '10px', fontWeight: '600', color: BLOCK_COLORS[blockColorMap[s.block_id] % BLOCK_COLORS.length], overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              S{s.week_number}D{s.day_number}
+                              {s.athlete_label ? `${s.athlete_label.split(' ')[0]} ` : ''}{s.block_name}
                             </span>
                           </div>
                         ))}
@@ -210,26 +210,16 @@ const CalendarioView = ({ userId, onBack }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: BLOCK_COLORS[blockColorMap[session.block_id] % BLOCK_COLORS.length] }} />
                     <span style={{ fontSize: '13px', fontWeight: '700', color: t.text2 }}>
-                      {session.block_name} — Semana {session.week_number}, Día {session.day_number}
+                      {session.athlete_label ? `${session.athlete_label} · ` : ''}{session.block_name} — Sem {session.week_number}, {session.day_name || `Día ${session.day_number}`}
                     </span>
                   </div>
                   {session.entrenos.length === 0 ? (
                     <p style={{ fontSize: '13px', color: t.text3, paddingLeft: '16px' }}>Sin ejercicios programados</p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '16px' }}>
                       {session.entrenos.map((e, ei) => (
                         <div key={ei} style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: t.surface2, borderRadius: '8px', padding: '8px 12px' }}>
-                          <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: '14px', fontWeight: '600' }}>{e.ejercicio_nombre}</span>
-                          </div>
-                          <span style={{
-                            backgroundColor: `${BLOCK_COLORS[blockColorMap[session.block_id] % BLOCK_COLORS.length]}15`,
-                            color: BLOCK_COLORS[blockColorMap[session.block_id] % BLOCK_COLORS.length],
-                            border: `1px solid ${BLOCK_COLORS[blockColorMap[session.block_id] % BLOCK_COLORS.length]}30`,
-                            borderRadius: '5px', padding: '2px 8px', fontSize: '12px', fontWeight: '700',
-                          }}>
-                            {e.num_sets}×x{e.target_reps} @{e.target_rpe}
-                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: '600', flex: 1 }}>{e.ejercicio_nombre}</span>
                         </div>
                       ))}
                     </div>

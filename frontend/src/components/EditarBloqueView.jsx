@@ -143,7 +143,7 @@ const ExerciseCard = ({ plan, onFocus, isFocused, onDeleted }) => {
         {loading ? (
           <p style={{ fontSize: '12px', color: t.text3, padding: '8px 0', textAlign: 'center' }}>…</p>
         ) : series.map((s) => (
-          <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '14px 1fr 1fr 1fr 18px', gap: '6px', alignItems: 'center', marginBottom: '5px' }}>
+          <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '14px 1fr 1fr 1fr 22px', gap: '6px', alignItems: 'center', marginBottom: '5px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: dotColor(s.planned_rpe), justifySelf: 'center' }} />
             {[
               { key: 'planned_weight', val: s.planned_weight, step: 2.5, min: 0, placeholder: '—' },
@@ -162,8 +162,23 @@ const ExerciseCard = ({ plan, onFocus, isFocused, onDeleted }) => {
                 }}
               />
             ))}
-            <button onClick={e => { e.stopPropagation(); if (series.length > 1) { axios.delete(`${API}/series/${s.id}/`).then(() => setSeries(prev => prev.filter(x => x.id !== s.id))); } }}
-              style={{ background: 'none', border: 'none', cursor: series.length > 1 ? 'pointer' : 'default', color: series.length > 1 ? t.text3 : 'transparent', fontSize: '13px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                axios.delete(`${API}/series/${s.id}/`)
+                  .then(() => setSeries(prev => prev.filter(x => x.id !== s.id)))
+                  .catch(() => {});
+              }}
+              style={{
+                width: '22px', height: '22px', borderRadius: '5px',
+                border: `1px solid ${t.danger}40`, background: 'none',
+                color: t.danger, cursor: 'pointer', fontSize: '13px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = `${t.danger}15`; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >×</button>
           </div>
         ))}
       </div>
@@ -181,7 +196,7 @@ const ExerciseCard = ({ plan, onFocus, isFocused, onDeleted }) => {
 
 const CATEGORIES = ['basic', 'accessory', 'cardio', 'mobility'];
 
-const AddExerciseInline = ({ exercises: initialExercises, dayId, onAdded, onCancel }) => {
+const AddExerciseInline = ({ exercises: initialExercises, dayId, onAdded, onCancel, userId }) => {
   const [exercises, setExercises] = useState(initialExercises);
   const [exId, setExId] = useState('');
   const [sets, setSets] = useState('3');
@@ -219,6 +234,7 @@ const AddExerciseInline = ({ exercises: initialExercises, dayId, onAdded, onCanc
         name: newName.trim(),
         category: newCategory,
         variant: newVariant.trim() || null,
+        user_id: userId || null,
       });
       const created = data.ejercicio;
       setExercises(prev => [...prev, created]);
@@ -353,7 +369,7 @@ const AddExerciseInline = ({ exercises: initialExercises, dayId, onAdded, onCanc
 
 // ─── Main view ────────────────────────────────────────────────────────────────
 
-const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
+const EditarBloqueView = ({ blockId, athleteId, userId, userRole, onBack }) => {
   const [block, setBlock] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -364,13 +380,16 @@ const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [focusedPlanId, setFocusedPlanId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+
+  const isCoach = userRole === 'coach';
 
   useEffect(() => {
     if (!blockId) return;
     Promise.all([
       axios.get(`${API}/atleta/${athleteId || 0}/blocks/`),
       axios.get(`${API}/blocks/${blockId}/weeks/`),
-      axios.get(`${API}/ejercicios/`),
+      axios.get(`${API}/ejercicios/`, { params: userId ? { user_id: userId } : {} }),
     ]).then(([bRes, wRes, eRes]) => {
       const b = (bRes.data.bloques || []).find(bl => bl.id === blockId);
       setBlock(b || null);
@@ -413,6 +432,21 @@ const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
 
   const focusedWorkout = workouts.find(w => w.plan_id === focusedPlanId);
 
+  const currentWeekObj = weeks.find(w => w.week_number === selectedWeek);
+  const isCurrentWeekPublished = currentWeekObj?.published === 1;
+
+  const handlePublishWeek = async () => {
+    if (!currentWeekObj) return;
+    setPublishing(true);
+    try {
+      const endpoint = isCurrentWeekPublished ? 'unpublish' : 'publish';
+      await axios.post(`${API}/weeks/${currentWeekObj.id}/${endpoint}/`);
+      setWeeks(prev => prev.map(w =>
+        w.id === currentWeekObj.id ? { ...w, published: isCurrentWeekPublished ? 0 : 1 } : w
+      ));
+    } finally { setPublishing(false); }
+  };
+
   if (loading) return (
     <div style={{ padding: '48px 20px', textAlign: 'center', color: t.text2 }}>Cargando...</div>
   );
@@ -440,6 +474,21 @@ const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
           <button onClick={() => setSelectedWeek(w => Math.min(weeks.length, w + 1))} disabled={selectedWeek >= weeks.length}
             style={{ width: '26px', height: '26px', borderRadius: '6px', border: `1px solid ${t.border2}`, background: 'none', color: t.text2, cursor: 'pointer', opacity: selectedWeek >= weeks.length ? 0.3 : 1, fontSize: '14px' }}>›</button>
         </div>
+
+        {/* Publish button — coaches only, on coach-managed blocks */}
+        {isCoach && block && block.coach_id !== block.athlete_id && (
+          <button onClick={handlePublishWeek} disabled={publishing}
+            style={{
+              padding: '6px 12px', borderRadius: '7px', border: 'none', cursor: 'pointer',
+              fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap',
+              backgroundColor: isCurrentWeekPublished ? t.surface2 : t.primary,
+              color: isCurrentWeekPublished ? t.text2 : t.bg,
+              border: isCurrentWeekPublished ? `1px solid ${t.border2}` : 'none',
+              opacity: publishing ? 0.6 : 1,
+            }}>
+            {publishing ? '...' : isCurrentWeekPublished ? '🔒 Despublicar' : '✓ Publicar semana'}
+          </button>
+        )}
       </div>
 
       {/* 3-panel body */}
@@ -462,7 +511,7 @@ const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
                 onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = 'transparent'; }}
               >
                 <div style={{ fontWeight: active ? '700' : '500', fontSize: '13px', color: active ? t.primary : t.text }}>
-                  Día {day.day_number}
+                  {day.day_name || `Día ${day.day_number}`}
                 </div>
                 {date && <div style={{ fontSize: '11px', color: t.text3, marginTop: '1px' }}>{date}</div>}
               </button>
@@ -496,6 +545,7 @@ const EditarBloqueView = ({ blockId, athleteId, onBack }) => {
             <AddExerciseInline
               exercises={exercises}
               dayId={selectedDay.id}
+              userId={userId}
               onAdded={(list) => { setWorkouts(list); setShowAdd(false); }}
               onCancel={() => setShowAdd(false)}
             />

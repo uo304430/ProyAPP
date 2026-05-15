@@ -13,11 +13,25 @@ def registrar_usuario(user_data: UserCreate, db: Session = Depends(get_db)):
     email = user_data.email.lower().strip()
     if db.query(models.User).filter(models.User.email == email).first():
         raise HTTPException(status_code=400, detail="El email ya está registrado")
+
+    uname = user_data.username.strip().lower() if user_data.username else None
+    if uname and db.query(models.User).filter(models.User.username == uname).first():
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
+
     hashed = bcrypt.hashpw(user_data.password.encode(), bcrypt.gensalt()).decode()
-    user = models.User(email=email, hashed_password=hashed, role=user_data.role)
+    user = models.User(email=email, hashed_password=hashed, role=user_data.role, username=uname)
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    profile = models.Profile(
+        user_id=user.id,
+        first_name=user_data.first_name.strip() if user_data.first_name else None,
+        last_name=user_data.last_name.strip() if user_data.last_name else None,
+    )
+    db.add(profile)
+    db.commit()
+
     return {"mensaje": "Usuario registrado", "usuario_id": user.id, "email": user.email, "rol": user.role}
 
 

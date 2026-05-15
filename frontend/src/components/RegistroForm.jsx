@@ -13,15 +13,33 @@ const RegistroForm = ({ onRegisterSuccess, onGoLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('athlete');
+  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('El nombre y los apellidos son obligatorios');
+      return;
+    }
+    if (!username.trim()) {
+      setError('El nombre de usuario es obligatorio');
+      return;
+    }
     setLoading(true);
     try {
-      const { data } = await axios.post(`${API}/register/`, { email, password, role });
+      const { data } = await axios.post(`${API}/register/`, {
+        email,
+        password,
+        role,
+        username: username.trim().toLowerCase(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+      });
       onRegisterSuccess(data.usuario_id, data.rol);
     } catch (err) {
       setError(err.response?.data?.detail || 'Error al registrar');
@@ -47,7 +65,7 @@ const RegistroForm = ({ onRegisterSuccess, onGoLogin }) => {
               borderRadius: '9px', display: 'inline-flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '18px',
             }}>⚡</span>
-            <span style={{ color: t.text }}>PowerApp</span>
+            <span style={{ color: t.text }}>B2L</span>
           </div>
           <p style={{ color: t.text2, fontSize: '14px', marginTop: '8px' }}>
             Crea tu cuenta gratis
@@ -86,6 +104,52 @@ const RegistroForm = ({ onRegisterSuccess, onGoLogin }) => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Name row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={label}>Nombre</label>
+                <input
+                  type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                  required placeholder="Juan"
+                  style={input}
+                  onFocus={e => e.target.style.borderColor = t.primary}
+                  onBlur={e => e.target.style.borderColor = t.border2}
+                />
+              </div>
+              <div>
+                <label style={label}>Apellidos</label>
+                <input
+                  type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                  required placeholder="García López"
+                  style={input}
+                  onFocus={e => e.target.style.borderColor = t.primary}
+                  onBlur={e => e.target.style.borderColor = t.border2}
+                />
+              </div>
+            </div>
+
+            {/* Username */}
+            <div>
+              <label style={label}>Nombre de usuario</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                  color: t.text3, fontSize: '14px', pointerEvents: 'none', userSelect: 'none',
+                }}>@</span>
+                <input
+                  type="text" value={username}
+                  onChange={e => setUsername(e.target.value.replace(/[^a-z0-9_.-]/gi, '').toLowerCase())}
+                  required placeholder="juangarcia"
+                  style={{ ...input, paddingLeft: '28px' }}
+                  onFocus={e => e.target.style.borderColor = t.primary}
+                  onBlur={e => e.target.style.borderColor = t.border2}
+                />
+              </div>
+              <p style={{ fontSize: '11px', color: t.text3, marginTop: '4px' }}>
+                Otros usuarios te encontrarán por este nombre
+              </p>
             </div>
 
             <div>

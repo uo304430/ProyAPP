@@ -5,16 +5,20 @@ import { t } from '../styles/theme';
 const API = '/api';
 const DAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-const CoachPanelView = ({ coachId, onBack, onViewAthleteBlocks, onViewAthleteCalendar }) => {
+const CoachPanelView = ({ coachId, onViewAthleteBlocks, onViewAthleteCalendar }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [pending, setPending] = useState({ pending: {}, total: 0 });
 
   useEffect(() => {
-    axios.get(`${API}/coach/${coachId}/weekly-overview/`)
-      .then(r => setData(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      axios.get(`${API}/coach/${coachId}/weekly-overview/`),
+      axios.get(`${API}/coach/${coachId}/pending-reviews/`),
+    ]).then(([overview, pend]) => {
+      setData(overview.data);
+      setPending(pend.data);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [coachId]);
 
   const stats = data?.stats || { total: 0, active: 0, no_active_block: 0 };
@@ -27,22 +31,20 @@ const CoachPanelView = ({ coachId, onBack, onViewAthleteBlocks, onViewAthleteCal
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '8px', width: '36px', height: '36px', cursor: 'pointer', color: t.text2, fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>Panel de Atletas</h1>
-            <p style={{ fontSize: '13px', color: t.text3, marginTop: '2px' }}>
-              {stats.total} atleta{stats.total !== 1 ? 's' : ''} conectado{stats.total !== 1 ? 's' : ''}
-            </p>
-          </div>
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px' }}>Panel de Atletas</h1>
+          <p style={{ fontSize: '13px', color: t.text3, marginTop: '4px' }}>
+            {stats.total} atleta{stats.total !== 1 ? 's' : ''} conectado{stats.total !== 1 ? 's' : ''}
+          </p>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
           {[
             { label: 'Activos esta semana', value: `${stats.active}/${stats.total}`, accent: t.primary },
             { label: 'Sin bloque activo', value: stats.no_active_block, accent: stats.no_active_block > 0 ? '#ffa502' : t.text3 },
             { label: 'Total atletas', value: stats.total, accent: '#3a86ff' },
+            { label: 'Semanas por revisar', value: pending.total, accent: pending.total > 0 ? '#ffa502' : t.text3 },
           ].map(s => (
             <div key={s.label} style={{ backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '16px 20px' }}>
               <div style={{ fontSize: '11px', color: t.text3, fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</div>
@@ -125,12 +127,12 @@ const CoachPanelView = ({ coachId, onBack, onViewAthleteBlocks, onViewAthleteCal
                         : (athlete.display_name?.[0] || '?').toUpperCase()}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {athlete.display_name}
                       </div>
-                      {b && (
+                      {athlete.username && (
                         <div style={{ fontSize: '11px', color: t.text3, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {b.name}
+                          @{athlete.username}
                         </div>
                       )}
                     </div>
@@ -163,16 +165,27 @@ const CoachPanelView = ({ coachId, onBack, onViewAthleteBlocks, onViewAthleteCal
                   </div>
 
                   {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                    <button
-                      onClick={() => onViewAthleteCalendar(athlete.athlete_id, athlete.display_name)}
-                      title="Ver calendario"
-                      style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: t.text3, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >📅</button>
-                    <button
-                      onClick={() => onViewAthleteBlocks(athlete.athlete_id, athlete.display_name)}
-                      style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '6px', padding: '0 8px', height: '28px', cursor: 'pointer', color: t.text2, fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' }}
-                    >Bloques</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => onViewAthleteCalendar(athlete.athlete_id, athlete.display_name)}
+                        title="Ver calendario"
+                        style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', color: t.text3, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >📅</button>
+                      <button
+                        onClick={() => onViewAthleteBlocks(athlete.athlete_id, athlete.display_name)}
+                        style={{ background: 'none', border: `1px solid ${t.border2}`, borderRadius: '6px', padding: '0 8px', height: '28px', cursor: 'pointer', color: t.text2, fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap' }}
+                      >Bloques</button>
+                    </div>
+                    {(pending.pending[athlete.athlete_id] || 0) > 0 && (
+                      <div style={{
+                        fontSize: '10px', fontWeight: '700', color: '#ffa502',
+                        backgroundColor: '#ffa50215', border: '1px solid #ffa50240',
+                        borderRadius: '5px', padding: '2px 7px', whiteSpace: 'nowrap',
+                      }}>
+                        {pending.pending[athlete.athlete_id]} sem. pendiente{pending.pending[athlete.athlete_id] !== 1 ? 's' : ''}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

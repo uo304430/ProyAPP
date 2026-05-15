@@ -218,7 +218,7 @@ const TabConexiones = ({ userId, onViewAthleteBlocks }) => {
 // ─── Tab: Invitar ─────────────────────────────────────────────────────────────
 
 const TabInvitar = ({ userId }) => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -229,10 +229,10 @@ const TabInvitar = ({ userId }) => {
     try {
       await axios.post(`${API}/connections/send/`, {
         from_user_id: userId,
-        to_email: email.trim(),
+        to_identifier: identifier.trim(),
       });
-      setMsg({ ok: true, text: `Solicitud enviada a ${email}` });
-      setEmail('');
+      setMsg({ ok: true, text: `Solicitud enviada a ${identifier.trim()}` });
+      setIdentifier('');
     } catch (err) {
       setMsg({ ok: false, text: err.response?.data?.detail || 'Error al enviar' });
     } finally {
@@ -247,18 +247,18 @@ const TabInvitar = ({ userId }) => {
         borderRadius: '12px', padding: '16px 18px',
         fontSize: '13px', color: t.text2, lineHeight: '1.6',
       }}>
-        Invita a otro usuario por su email. Una vez acepte la solicitud podrás{' '}
+        Invita a otro usuario por su email o por su <span style={{ color: t.primary, fontWeight: '600' }}>@usuario</span>.
+        Una vez acepte la solicitud podrás{' '}
         <span style={{ color: t.primary, fontWeight: '600' }}>programarle y editarle bloques</span>.
-        Tanto entrenadores como atletas pueden conectar con cualquier otro usuario.
       </div>
 
       <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div>
-          <label style={label}>Email del usuario</label>
+          <label style={label}>Email o @usuario</label>
           <input
-            type="email" required value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="usuario@email.com"
+            type="text" required value={identifier}
+            onChange={e => setIdentifier(e.target.value)}
+            placeholder="usuario@email.com  o  @nombreusuario"
             style={input}
             onFocus={e => e.target.style.borderColor = t.primary}
             onBlur={e => e.target.style.borderColor = t.border2}
@@ -277,12 +277,12 @@ const TabInvitar = ({ userId }) => {
         )}
 
         <button
-          type="submit" disabled={loading || !email.trim()}
+          type="submit" disabled={loading || !identifier.trim()}
           style={{
             padding: '11px 20px', borderRadius: '8px', cursor: 'pointer',
             backgroundColor: t.primary, color: t.bg,
             border: 'none', fontWeight: '600', fontSize: '14px',
-            opacity: (loading || !email.trim()) ? 0.5 : 1,
+            opacity: (loading || !identifier.trim()) ? 0.5 : 1,
             transition: 'opacity 150ms ease',
           }}
         >

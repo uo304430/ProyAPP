@@ -109,7 +109,7 @@ const BloquesView = ({ athleteId, userId, viewingAthleteName, onSelectBlock, onE
             return (
               <div
                 key={b.id}
-                onClick={() => onSelectBlock(b.id)}
+                onClick={() => onSelectBlock(b)}
                 style={{
                   backgroundColor: t.surface, border: `1px solid ${t.border}`,
                   borderRadius: '14px', padding: '20px 22px',

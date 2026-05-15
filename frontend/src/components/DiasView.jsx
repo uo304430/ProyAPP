@@ -6,7 +6,7 @@ const API = '/api';
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-const DiasView = ({ weekId, onSelectDay, onBack }) => {
+const DiasView = ({ weekId, onSelectDay, onCheckin, onBack }) => {
   const [dias, setDias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,8 +78,8 @@ const DiasView = ({ weekId, onSelectDay, onBack }) => {
               </div>
               <div>
                 <div style={{ fontWeight: '600', fontSize: '15px' }}>
-                  Día {dia.day_number}
-                  {dia.day_number <= 6 && (
+                  {dia.day_name || `Día ${dia.day_number}`}
+                  {!dia.day_name && dia.day_number <= 6 && (
                     <span style={{ color: t.text2, fontWeight: '400', fontSize: '13px', marginLeft: '8px' }}>
                       {DAY_NAMES[dia.day_number - 1]}
                     </span>
@@ -92,6 +92,44 @@ const DiasView = ({ weekId, onSelectDay, onBack }) => {
               <span style={{ marginLeft: 'auto', color: t.text3, fontSize: '20px' }}>›</span>
             </button>
           ))}
+
+          {/* Cuestionario semanal */}
+          {onCheckin && (
+            <button
+              onClick={onCheckin}
+              style={{
+                backgroundColor: t.surface, border: `1px solid ${t.border}`,
+                borderRadius: '12px', padding: '18px 20px',
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'center', gap: '16px',
+                transition: 'all 150ms ease', marginTop: '4px',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#3a86ff';
+                e.currentTarget.style.backgroundColor = t.surface2;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.backgroundColor = t.surface;
+              }}
+            >
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '10px',
+                backgroundColor: '#3a86ff18', border: '1px solid #3a86ff30',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '20px', flexShrink: 0,
+              }}>
+                💚
+              </div>
+              <div>
+                <div style={{ fontWeight: '600', fontSize: '15px' }}>Cuestionario semanal</div>
+                <div style={{ color: t.text2, fontSize: '13px', marginTop: '2px' }}>
+                  Bienestar · fatiga · sueño · motivación
+                </div>
+              </div>
+              <span style={{ marginLeft: 'auto', color: t.text3, fontSize: '20px' }}>›</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

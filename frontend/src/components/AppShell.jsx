@@ -7,8 +7,7 @@ const VIEW_GROUP = {
   'entrenos-dia': 'blocks', ejecucion: 'blocks',
   'edit-block': 'blocks', 'create-block': 'blocks',
   calendario: 'calendario',
-  progress: 'progress',
-  checkin: 'checkin',
+  dashboard: 'dashboard',
   competitions: 'competitions',
   connections: 'connections',
   'coach-panel': 'coach-panel',
@@ -18,8 +17,7 @@ const VIEW_GROUP = {
 const NAV = (userRole) => [
   { id: 'blocks',       icon: '📋', label: 'Mis Bloques'  },
   { id: 'calendario',   icon: '📅', label: 'Calendario'   },
-  { id: 'progress',     icon: '📈', label: 'Progreso'     },
-  { id: 'checkin',      icon: '💚', label: 'Bienestar'    },
+  { id: 'dashboard',    icon: '📊', label: 'Dashboard'    },
   { id: 'competitions', icon: '🏆', label: 'Competiciones'},
   { id: 'connections',  icon: '🔗', label: 'Conexiones'   },
   ...(userRole === 'coach' ? [{ id: 'coach-panel', icon: '🏋️', label: 'Atletas' }] : []),
@@ -29,6 +27,7 @@ const SIDEBAR_W = 220;
 
 const AppShell = ({ view, userRole, onNavigate, onLogout, children }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 680);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 680);
@@ -39,11 +38,16 @@ const AppShell = ({ view, userRole, onNavigate, onLogout, children }) => {
   const active = VIEW_GROUP[view] || '';
   const navItems = NAV(userRole);
 
+  const navigate = (id) => {
+    setSidebarOpen(false);
+    onNavigate(id);
+  };
+
   const NavBtn = ({ id, icon, label, isProfile = false }) => {
     const on = active === id || (isProfile && view === 'profile');
     return (
       <button
-        onClick={() => isProfile ? onNavigate('profile') : onNavigate(id)}
+        onClick={() => navigate(isProfile ? 'profile' : id)}
         style={{
           display: 'flex', alignItems: 'center', gap: '11px',
           padding: '10px 13px', borderRadius: '10px', border: 'none',
@@ -105,28 +109,57 @@ const AppShell = ({ view, userRole, onNavigate, onLogout, children }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: t.bg }}>
+
+      {/* Botón hamburger flotante — siempre visible */}
+      <button
+        onClick={() => setSidebarOpen(o => !o)}
+        style={{
+          position: 'fixed', top: '14px', left: '14px', zIndex: 200,
+          width: '38px', height: '38px', borderRadius: '10px',
+          backgroundColor: t.surface, border: `1px solid ${t.border2}`,
+          cursor: 'pointer', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: '5px',
+        }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = t.surface2}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = t.surface}
+      >
+        <span style={{ display: 'block', width: '16px', height: '2px', backgroundColor: t.text2, borderRadius: '2px' }} />
+        <span style={{ display: 'block', width: '16px', height: '2px', backgroundColor: t.text2, borderRadius: '2px' }} />
+        <span style={{ display: 'block', width: '16px', height: '2px', backgroundColor: t.text2, borderRadius: '2px' }} />
+      </button>
+
+      {/* Backdrop */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.45)' }}
+        />
+      )}
+
       {/* Sidebar */}
       <div style={{
-        width: `${SIDEBAR_W}px`, flexShrink: 0,
+        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 150,
+        width: `${SIDEBAR_W}px`,
         backgroundColor: t.surface, borderRight: `1px solid ${t.border}`,
-        display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50, overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', overflowY: 'auto',
+        transform: sidebarOpen ? 'translateX(0)' : `translateX(-${SIDEBAR_W}px)`,
+        transition: 'transform 230ms cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
-        {/* Logo */}
-        <div style={{ padding: '22px 18px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+        {/* Logo alineado con el hamburger — mismo top que el botón flotante */}
+        <div style={{
+          height: '66px', flexShrink: 0,
+          display: 'flex', alignItems: 'center',
+          paddingLeft: '66px', gap: '9px', userSelect: 'none',
+        }}>
           <span style={{
-            width: '30px', height: '30px', backgroundColor: t.primary, borderRadius: '8px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0,
+            width: '28px', height: '28px', backgroundColor: t.primary, borderRadius: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0,
           }}>⚡</span>
-          <span style={{ fontWeight: '800', fontSize: '16px', letterSpacing: '-0.3px' }}>PowerApp</span>
+          <span style={{ fontWeight: '800', fontSize: '16px', letterSpacing: '-0.3px' }}>B2L</span>
         </div>
-
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '4px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <nav style={{ flex: 1, padding: '0 10px 4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {navItems.map(item => <NavBtn key={item.id} {...item} />)}
         </nav>
-
-        {/* Profile + logout */}
         <div style={{ padding: '10px 10px 18px', borderTop: `1px solid ${t.border2}`, flexShrink: 0 }}>
           <NavBtn id="profile" icon="👤" label="Mi Perfil" isProfile />
           <button
@@ -147,8 +180,8 @@ const AppShell = ({ view, userRole, onNavigate, onLogout, children }) => {
         </div>
       </div>
 
-      {/* Main content */}
-      <div style={{ marginLeft: `${SIDEBAR_W}px`, flex: 1, minHeight: '100vh', overflowY: 'auto' }}>
+      {/* Contenido principal */}
+      <div style={{ flex: 1, minHeight: '100vh', overflowY: 'auto' }}>
         {children}
       </div>
     </div>

@@ -42,10 +42,10 @@ const LoginForm = ({ onLoginSuccess, onGoRegister }) => {
               borderRadius: '9px', display: 'inline-flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '18px',
             }}>⚡</span>
-            <span style={{ color: t.text }}>PowerApp</span>
+            <span style={{ color: t.text }}>B2L</span>
           </div>
           <p style={{ color: t.text2, fontSize: '14px', marginTop: '8px' }}>
-            Tu plataforma de powerlifting
+            Born to Lift
           </p>
         </div>
 

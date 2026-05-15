@@ -10,11 +10,17 @@ router = APIRouter(tags=["connections"])
 def _enrich_user(conn_id: int, other_id: int, db: Session) -> dict:
     user = db.query(models.User).filter(models.User.id == other_id).first()
     profile = db.query(models.Profile).filter(models.Profile.user_id == other_id).first()
+    first = profile.first_name if profile else None
+    last = profile.last_name if profile else None
+    full_name = f"{first or ''} {last or ''}".strip() or None
     return {
         "connection_id": conn_id,
         "user_id": other_id,
         "email": user.email if user else "?",
-        "display_name": (profile.display_name if profile else None) or (user.email if user else "?"),
+        "username": user.username if user else None,
+        "display_name": full_name or (profile.display_name if profile else None) or (user.email if user else "?"),
+        "first_name": first,
+        "last_name": last,
         "avatar_url": profile.avatar_url if profile else None,
     }
 
@@ -24,9 +30,19 @@ def send_request(data: ConnectionRequestCreate, db: Session = Depends(get_db)):
     if not db.query(models.User).filter(models.User.id == data.from_user_id).first():
         raise HTTPException(status_code=404, detail="Usuario origen no encontrado")
 
-    target = db.query(models.User).filter(models.User.email == data.to_email.lower().strip()).first()
+    # Resolve identifier: prefer to_identifier, fall back to to_email
+    identifier = (data.to_identifier or data.to_email or "").strip()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Debes indicar un email o nombre de usuario")
+
+    # Try email first, then username (strip leading @ for username lookup)
+    lookup = identifier.lower().lstrip("@")
+    target = (
+        db.query(models.User).filter(models.User.email == lookup).first()
+        or db.query(models.User).filter(models.User.username == lookup).first()
+    )
     if not target:
-        raise HTTPException(status_code=404, detail="No existe ningún usuario con ese email")
+        raise HTTPException(status_code=404, detail="No existe ningún usuario con ese email o usuario")
     if target.id == data.from_user_id:
         raise HTTPException(status_code=400, detail="No puedes enviarte una solicitud a ti mismo")
 
@@ -100,9 +116,15 @@ def get_coach_athletes(coach_id: int, db: Session = Depends(get_db)):
         for b in blocks:
             num_weeks = db.query(models.Week).filter(models.Week.block_id == b.id).count()
             block_list.append({"id": b.id, "name": b.name, "objective": b.objective, "num_weeks": num_weeks})
+        first = profile.first_name if profile else None
+        last = profile.last_name if profile else None
+        full_name = f"{first or ''} {last or ''}".strip() or None
         result.append({
             "athlete_id": link.athlete_id,
-            "display_name": (profile.display_name if profile else None) or user.email,
+            "display_name": full_name or (profile.display_name if profile else None) or user.email,
+            "first_name": first,
+            "last_name": last,
+            "username": user.username,
             "email": user.email,
             "avatar_url": profile.avatar_url if profile else None,
             "blocks": block_list,
@@ -170,9 +192,15 @@ def get_weekly_overview(coach_id: int, db: Session = Depends(get_db)):
         if status != "active":
             no_active_count += 1
 
+        first = profile.first_name if profile else None
+        last = profile.last_name if profile else None
+        full_name = f"{first or ''} {last or ''}".strip() or None
         athletes_data.append({
             "athlete_id": link.athlete_id,
-            "display_name": (profile.display_name if profile else None) or user.email,
+            "display_name": full_name or (profile.display_name if profile else None) or user.email,
+            "first_name": first,
+            "last_name": last,
+            "username": user.username,
             "avatar_url": profile.avatar_url if profile else None,
             "active_block": active_block_info,
             "status": status,
