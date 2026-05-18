@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { t, input, btnPrimary, label } from '../styles/theme';
+import { t } from '../styles/theme';
 
 const API = '/api';
 
@@ -25,95 +25,150 @@ const LoginForm = ({ onLoginSuccess, onGoRegister, onForgotPassword }) => {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px', backgroundColor: t.bg,
-    }}>
+    <div className="auth-bg">
       <div style={{ width: '100%', maxWidth: '420px' }}>
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        {/* B2L display header */}
+        <div
+          className="animate-in"
+          style={{ textAlign: 'center', marginBottom: '28px' }}
+        >
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '10px',
-            fontSize: '22px', fontWeight: '700', letterSpacing: '-0.5px',
+            fontFamily: t.fontDisplay,
+            fontSize: '82px',
+            letterSpacing: '0.1em',
+            lineHeight: 0.88,
+            background: t.primaryGrad,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            marginBottom: '10px',
           }}>
-            <span style={{
-              width: '36px', height: '36px', backgroundColor: t.primary,
-              borderRadius: '9px', display: 'inline-flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: '18px',
-            }}>⚡</span>
-            <span style={{ color: t.text }}>B2L</span>
+            B2L
           </div>
-          <p style={{ color: t.text2, fontSize: '14px', marginTop: '8px' }}>
+          <div style={{
+            fontSize: '10px',
+            fontWeight: '700',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            color: t.text3,
+            fontFamily: t.fontBody,
+          }}>
             Born to Lift
-          </p>
+          </div>
         </div>
 
-        {/* Card */}
-        <div style={{
-          backgroundColor: t.surface, border: `1px solid ${t.border}`,
-          borderRadius: '16px', padding: '32px',
-        }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '6px' }}>Bienvenido de vuelta</h2>
-          <p style={{ color: t.text2, fontSize: '14px', marginBottom: '28px' }}>
+        {/* Glass card */}
+        <div className="glass-card animate-in-delay" style={{ padding: '32px 28px' }}>
+          <h2 style={{
+            fontSize: '22px', fontWeight: '700',
+            marginBottom: '4px', letterSpacing: '-0.2px',
+            fontFamily: t.fontBody,
+          }}>
+            Bienvenido de vuelta
+          </h2>
+          <p style={{
+            color: t.text2, fontSize: '14px', marginBottom: '28px',
+            fontFamily: t.fontBody,
+          }}>
             Inicia sesión para ver tus entrenamientos
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div>
-              <label style={label}>Email</label>
+              <label className="field-label">Email</label>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value.toLowerCase())}
-                required placeholder="tu@email.com"
-                style={input}
-                onFocus={e => e.target.style.borderColor = t.primary}
-                onBlur={e => e.target.style.borderColor = t.border2}
+                className="field"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value.toLowerCase())}
+                required
+                placeholder="tu@email.com"
+                autoComplete="email"
               />
             </div>
+
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                <label style={label}>Contraseña</label>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', marginBottom: '7px',
+              }}>
+                <label className="field-label" style={{ margin: 0 }}>Contraseña</label>
                 <button
                   type="button"
                   onClick={onForgotPassword}
-                  style={{ background: 'none', border: 'none', color: t.text2, fontSize: '12px', cursor: 'pointer', padding: 0 }}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: t.text3, fontSize: '12px',
+                    cursor: 'pointer', padding: 0,
+                    transition: 'color 160ms ease',
+                    fontFamily: t.fontBody, letterSpacing: '0.02em',
+                  }}
                   onMouseEnter={e => e.currentTarget.style.color = t.primary}
-                  onMouseLeave={e => e.currentTarget.style.color = t.text2}
+                  onMouseLeave={e => e.currentTarget.style.color = t.text3}
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
               </div>
               <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required placeholder="••••••••"
-                style={input}
-                onFocus={e => e.target.style.borderColor = t.primary}
-                onBlur={e => e.target.style.borderColor = t.border2}
+                className="field"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                autoComplete="current-password"
               />
             </div>
 
             {error && (
-              <div style={{
-                backgroundColor: t.dangerDim, border: `1px solid ${t.danger}40`,
-                borderRadius: '8px', padding: '10px 14px',
-                color: t.danger, fontSize: '13px',
-              }}>{error}</div>
+              <div
+                className="animate-fade"
+                style={{
+                  background: t.dangerDim,
+                  border: `1px solid rgba(255, 61, 85, 0.22)`,
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  color: t.danger,
+                  fontSize: '13px',
+                  fontFamily: t.fontBody,
+                }}
+              >
+                {error}
+              </div>
             )}
 
-            <button type="submit" disabled={loading} style={{
-              ...btnPrimary, width: '100%', opacity: loading ? 0.6 : 1,
-            }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary"
+              style={{ width: '100%', marginTop: '4px' }}
+            >
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', color: t.text2, fontSize: '14px' }}>
+        {/* Register link */}
+        <p style={{
+          textAlign: 'center', marginTop: '24px',
+          color: t.text2, fontSize: '14px',
+          fontFamily: t.fontBody,
+          animation: 'fadeIn 500ms 200ms both',
+        }}>
           ¿No tienes cuenta?{' '}
-          <button onClick={onGoRegister} style={{
-            background: 'none', border: 'none', color: t.primary,
-            cursor: 'pointer', fontWeight: '600', fontSize: '14px',
-          }}>
+          <button
+            onClick={onGoRegister}
+            style={{
+              background: 'none', border: 'none',
+              color: t.primary, cursor: 'pointer',
+              fontWeight: '600', fontSize: '14px',
+              fontFamily: t.fontBody,
+              transition: 'opacity 160ms ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
             Regístrate
           </button>
         </p>

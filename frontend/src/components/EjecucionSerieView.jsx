@@ -6,16 +6,23 @@ const API = '/api';
 
 const DOT_COLORS = {
   on:    t.primary,
-  under: '#3a86ff',
-  over:  '#ef4444',
+  under: t.info,
+  over:  t.danger,
   empty: t.border2,
 };
 
 const STATUS_BG = {
-  on:    `${t.primary}12`,
-  under: '#3a86ff12',
-  over:  '#ef444412',
+  on:    t.primaryDim,
+  under: t.infoDim,
+  over:  t.dangerDim,
   empty: 'transparent',
+};
+
+const STATUS_BORDER = {
+  on:    `rgba(212, 137, 42, 0.25)`,
+  under: `rgba(74, 143, 212, 0.25)`,
+  over:  `rgba(200, 64, 48, 0.25)`,
+  empty: t.border2,
 };
 
 const getStatus = (planned_rpe, actual_rpe) => {
@@ -108,47 +115,96 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
   if (!workout) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <button onClick={onBack} style={{ padding: '10px 20px', backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, cursor: 'pointer' }}>Volver</button>
+        <button onClick={onBack} style={{ padding: '10px 20px', backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px', color: t.text, cursor: 'pointer', fontFamily: t.fontBody }}>
+          Volver
+        </button>
       </div>
     );
   }
 
-  // Grid: dot | plan_ref | WEIGHT | REPS | RPE | NOTA
-  const GRID = '16px 1fr 1fr 1fr 1fr 1.4fr';
+  const GRID = '14px 1fr 1fr 1fr 1fr 1.4fr';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: t.bg }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '24px 16px 48px' }}>
+      <div style={{
+        maxWidth: '620px', margin: '0 auto',
+        padding: '28px 16px 56px',
+        animation: 'fadeInUp 320ms cubic-bezier(0.22,1,0.36,1) both',
+      }}>
+
+        {/* Back */}
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none', border: 'none', padding: '0 0 4px',
+            cursor: 'pointer', color: t.text2, fontSize: '14px', fontWeight: '600',
+            display: 'flex', alignItems: 'center', gap: '5px',
+            fontFamily: t.fontBody, letterSpacing: '0.02em',
+            transition: 'color 160ms ease',
+            marginBottom: '2px',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = t.text}
+          onMouseLeave={e => e.currentTarget.style.color = t.text2}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Atrás
+        </button>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', color: t.text2, fontSize: '15px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            ‹ Atrás
-          </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
-          <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+        <div style={{
+          display: 'flex', alignItems: 'flex-start',
+          justifyContent: 'space-between', marginBottom: '24px', gap: '16px',
+        }}>
+          <h1 style={{
+            fontSize: '21px', fontWeight: '800', letterSpacing: '-0.3px',
+            lineHeight: 1.2, fontFamily: t.fontBody, flex: 1,
+          }}>
             {workout.ejercicio_nombre}
           </h1>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: completedCount === series.length && series.length > 0 ? t.primary : t.text }}>
-              {completedCount}/{series.length}
+
+          {/* Set counter — Bebas Neue */}
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <div style={{
+              fontFamily: t.fontDisplay,
+              fontSize: '42px',
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+              color: completedCount === series.length && series.length > 0 ? t.primary : t.text,
+              transition: 'color 300ms ease',
+            }}>
+              {completedCount}<span style={{ color: t.text3, fontSize: '28px' }}>/{series.length}</span>
             </div>
-            <div style={{ fontSize: '10px', color: t.text3, fontWeight: '700', letterSpacing: '0.5px' }}>SERIES</div>
+            <div style={{
+              fontSize: '9px', fontWeight: '700', letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: t.text3,
+              fontFamily: t.fontBody, marginTop: '2px',
+            }}>
+              SERIES
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, marginBottom: '20px' }}>
+        {/* Tab bar */}
+        <div style={{
+          display: 'flex',
+          borderBottom: `1px solid ${t.border}`,
+          marginBottom: '20px',
+        }}>
           {['target', 'actual'].map(tb => (
             <button key={tb} onClick={() => setTab(tb)}
               style={{
-                background: 'none', border: 'none', padding: '10px 24px',
-                cursor: 'pointer', fontSize: '13px', fontWeight: '700',
-                letterSpacing: '0.8px', textTransform: 'uppercase',
+                background: 'none', border: 'none',
+                padding: '10px 24px',
+                cursor: 'pointer',
+                fontSize: '11px', fontWeight: '700',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
                 color: tab === tb ? t.text : t.text3,
                 borderBottom: `2px solid ${tab === tb ? t.primary : 'transparent'}`,
-                marginBottom: '-1px', transition: 'all 150ms ease',
+                marginBottom: '-1px',
+                transition: 'all 160ms ease',
+                fontFamily: t.fontBody,
               }}
             >
               {tb === 'target' ? 'Target' : 'Actual'}
@@ -157,17 +213,32 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
         </div>
 
         {error && (
-          <div style={{ backgroundColor: '#ef444415', border: '1px solid #ef444430', borderRadius: '8px', padding: '10px 14px', color: '#ef4444', fontSize: '13px', marginBottom: '16px' }}>
+          <div style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.22)',
+            borderRadius: '10px', padding: '10px 14px',
+            color: '#ef4444', fontSize: '13px', marginBottom: '16px',
+            fontFamily: t.fontBody,
+          }}>
             {error}
           </div>
         )}
 
         {/* Column headers */}
         {series.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: '8px', paddingLeft: '4px', marginBottom: '6px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: tab === 'actual' ? GRID : '14px 1fr 1fr 1fr 1fr',
+            gap: '8px', paddingLeft: '4px', marginBottom: '8px',
+          }}>
             <div /><div />
             {(tab === 'actual' ? ['PESO', 'REPS', 'RPE', 'NOTA'] : ['PESO', 'REPS', 'RPE']).map(h => (
-              <div key={h} style={{ textAlign: 'center', fontSize: '10px', fontWeight: '700', color: t.text3, letterSpacing: '0.5px' }}>{h}</div>
+              <div key={h} style={{
+                textAlign: 'center', fontSize: '9px', fontWeight: '700',
+                color: t.text3, letterSpacing: '0.1em', fontFamily: t.fontBody,
+              }}>
+                {h}
+              </div>
             ))}
           </div>
         )}
@@ -183,22 +254,31 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
               <div key={serie.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: tab === 'actual' ? GRID : '16px 1fr 1fr 1fr 1fr',
+                  gridTemplateColumns: tab === 'actual' ? GRID : '14px 1fr 1fr 1fr 1fr',
                   gap: '8px', alignItems: 'center',
-                  padding: '10px 8px',
+                  padding: '10px 10px',
                   borderRadius: '10px',
                   backgroundColor: done ? STATUS_BG[status] : t.surface,
-                  border: `1px solid ${done ? `${DOT_COLORS[status]}30` : t.border2}`,
-                  transition: 'all 200ms ease',
+                  border: `1px solid ${done ? STATUS_BORDER[status] : t.border2}`,
+                  transition: 'background-color 200ms ease, border-color 200ms ease',
                 }}
               >
                 {/* Status dot */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: DOT_COLORS[status], transition: 'background-color 200ms ease' }} />
+                  <div style={{
+                    width: '7px', height: '7px', borderRadius: '50%',
+                    backgroundColor: DOT_COLORS[status],
+                    boxShadow: done && status !== 'empty' ? `0 0 6px ${DOT_COLORS[status]}80` : 'none',
+                    transition: 'background-color 200ms ease, box-shadow 200ms ease',
+                  }} />
                 </div>
 
                 {/* Plan reference */}
-                <div style={{ fontSize: '12px', fontWeight: '600', color: t.text2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{
+                  fontSize: '12px', fontWeight: '500', color: t.text2,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  fontFamily: t.fontBody, letterSpacing: '0.01em',
+                }}>
                   {serie.planned_weight ? `${serie.planned_weight}kg` : ''} ×{serie.planned_reps} @{serie.planned_rpe}
                 </div>
 
@@ -214,17 +294,24 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
                         onChange={e => handleChange(idx, field, e.target.value)}
                         placeholder={placeholder}
                         style={{
-                          width: '100%', padding: '8px 4px', boxSizing: 'border-box',
+                          width: '100%', padding: '8px 4px',
                           backgroundColor: t.surface2, color: t.text,
                           border: `1px solid ${t.border2}`,
                           borderRadius: '8px', fontSize: '14px', fontWeight: '600',
                           textAlign: 'center', outline: 'none',
+                          fontFamily: t.fontBody,
+                          transition: 'border-color 160ms ease, box-shadow 160ms ease',
                         }}
-                        onFocus={e => e.target.style.borderColor = t.primary}
-                        onBlur={e => e.target.style.borderColor = t.border2}
+                        onFocus={e => {
+                          e.target.style.borderColor = t.primary;
+                          e.target.style.boxShadow = '0 0 0 2px rgba(0,255,135,0.1)';
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = t.border2;
+                          e.target.style.boxShadow = 'none';
+                        }}
                       />
                     ))}
-                    {/* Note input */}
                     <input
                       type="text"
                       value={notes[idx] ?? ''}
@@ -232,27 +319,28 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
                       onBlur={() => handleNoteBlur(idx)}
                       placeholder="nota..."
                       style={{
-                        width: '100%', padding: '8px 6px', boxSizing: 'border-box',
+                        width: '100%', padding: '8px 8px',
                         backgroundColor: t.surface2, color: t.text,
                         border: `1px solid ${t.border2}`,
                         borderRadius: '8px', fontSize: '12px',
-                        outline: 'none',
+                        outline: 'none', fontFamily: t.fontBody,
+                        transition: 'border-color 160ms ease',
                       }}
                       onFocus={e => e.target.style.borderColor = t.primary}
-                      onBlur2={e => e.target.style.borderColor = t.border2}
+                      onBlur={e => e.target.style.borderColor = t.border2}
                     />
                   </>
                 ) : (
                   <>
-                    <div style={{ textAlign: 'center', fontSize: '14px', color: t.text2, fontWeight: '600' }}>
-                      {serie.planned_weight != null ? serie.planned_weight : '—'}
-                    </div>
-                    <div style={{ textAlign: 'center', fontSize: '14px', color: t.text2, fontWeight: '600' }}>
-                      {serie.planned_reps}
-                    </div>
-                    <div style={{ textAlign: 'center', fontSize: '14px', color: t.text2, fontWeight: '600' }}>
-                      {serie.planned_rpe}
-                    </div>
+                    {[serie.planned_weight, serie.planned_reps, serie.planned_rpe].map((val, i) => (
+                      <div key={i} style={{
+                        textAlign: 'center', fontSize: '14px',
+                        color: t.text2, fontWeight: '600',
+                        fontFamily: t.fontBody,
+                      }}>
+                        {val != null ? val : '—'}
+                      </div>
+                    ))}
                   </>
                 )}
               </div>
@@ -260,57 +348,118 @@ const EjecucionSerieView = ({ workout, athleteId, userRole, onBack }) => {
           })}
         </div>
 
-        {/* + set button — only coaches can add sets */}
+        {/* Add set button — coaches only */}
         {tab === 'actual' && isCoach && (
           <button onClick={handleAddSet}
             style={{
               width: '100%', marginTop: '10px',
-              backgroundColor: t.primaryDim, border: `1px dashed ${t.primary}50`,
-              borderRadius: '10px', padding: '11px',
-              color: t.primary, fontSize: '22px', cursor: 'pointer',
+              background: t.primaryDim,
+              border: `1px dashed rgba(0,255,135,0.3)`,
+              borderRadius: '10px', padding: '12px',
+              color: t.primary, fontSize: '20px', cursor: 'pointer',
               fontWeight: '300', lineHeight: 1,
+              transition: 'background 160ms ease, border-color 160ms ease',
             }}
-          >+</button>
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(0,255,135,0.12)';
+              e.currentTarget.style.borderColor = 'rgba(0,255,135,0.5)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = t.primaryDim;
+              e.currentTarget.style.borderColor = 'rgba(0,255,135,0.3)';
+            }}
+          >
+            +
+          </button>
         )}
 
         {series.length === 0 && !error && (
-          <div style={{ textAlign: 'center', padding: '48px', backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '14px', color: t.text3, fontSize: '14px' }}>
+          <div style={{
+            textAlign: 'center', padding: '48px',
+            background: t.surface, border: `1px solid ${t.border}`,
+            borderRadius: '16px', color: t.text3, fontSize: '14px',
+            fontFamily: t.fontBody,
+          }}>
             Sin series definidas
           </div>
         )}
 
         {/* Statistics */}
         {series.length > 0 && (
-          <div style={{ marginTop: '20px', backgroundColor: t.surface, border: `1px solid ${t.border}`, borderRadius: '14px', padding: '18px 20px' }}>
-            <div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '10px' }}>Estadísticas</div>
-            <div style={{ display: 'flex', gap: '24px', fontSize: '14px', color: t.text2 }}>
-              {bestE1rm ? (
-                <span>E1RM: <strong style={{ color: t.primary, fontSize: '15px' }}>{bestE1rm} kg</strong></span>
-              ) : (
-                <span style={{ color: t.text3 }}>E1RM: —</span>
+          <div style={{
+            marginTop: '20px',
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: '16px', padding: '20px 22px',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset',
+          }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: t.text3,
+              fontFamily: t.fontBody, marginBottom: '16px',
+            }}>
+              Estadísticas
+            </div>
+            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+              {isBasic && (
+                <div>
+                  <div style={{
+                    fontFamily: t.fontDisplay,
+                    fontSize: '38px',
+                    letterSpacing: '0.04em',
+                    lineHeight: 1,
+                    color: bestE1rm ? t.primary : t.text3,
+                  }}>
+                    {bestE1rm ? bestE1rm : '—'}
+                  </div>
+                  <div style={{
+                    fontSize: '9px', fontWeight: '700', letterSpacing: '0.12em',
+                    textTransform: 'uppercase', color: t.text3,
+                    fontFamily: t.fontBody, marginTop: '4px',
+                  }}>
+                    E1RM (kg)
+                  </div>
+                </div>
               )}
-              <span>
-                Tonelaje:{' '}
-                <strong style={{ fontSize: '15px' }}>
-                  {tonnage > 0 ? `${tonnage.toLocaleString('es-ES')} kg` : '—'}
-                </strong>
-              </span>
+              <div>
+                <div style={{
+                  fontFamily: t.fontDisplay,
+                  fontSize: '38px',
+                  letterSpacing: '0.04em',
+                  lineHeight: 1,
+                  color: tonnage > 0 ? t.text : t.text3,
+                }}>
+                  {tonnage > 0 ? tonnage.toLocaleString('es-ES') : '—'}
+                </div>
+                <div style={{
+                  fontSize: '9px', fontWeight: '700', letterSpacing: '0.12em',
+                  textTransform: 'uppercase', color: t.text3,
+                  fontFamily: t.fontBody, marginTop: '4px',
+                }}>
+                  Tonelaje (kg)
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Completion bar */}
-        {series.length > 0 && completedCount > 0 && (
+        {series.length > 0 && (
           <div style={{ marginTop: '16px' }}>
-            <div style={{ height: '3px', backgroundColor: t.surface3, borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', backgroundColor: t.primary, borderRadius: '2px',
-                width: `${(completedCount / series.length) * 100}%`,
-                transition: 'width 300ms ease',
-              }} />
+            <div className="progress">
+              <div
+                className="progress-fill"
+                style={{ width: `${series.length > 0 ? (completedCount / series.length) * 100 : 0}%` }}
+              />
             </div>
-            {completedCount === series.length && (
-              <p style={{ textAlign: 'center', color: t.primary, fontSize: '13px', fontWeight: '600', marginTop: '8px' }}>
+            {completedCount === series.length && series.length > 0 && (
+              <p style={{
+                textAlign: 'center', color: t.primary,
+                fontSize: '12px', fontWeight: '700',
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                marginTop: '10px', fontFamily: t.fontBody,
+                animation: 'fadeIn 300ms both',
+              }}>
                 ✓ Ejercicio completado
               </p>
             )}
